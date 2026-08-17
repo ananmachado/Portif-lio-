@@ -1,0 +1,6 @@
+{
+  "name": "Portfólio Pessoal Autoral",
+  "description": "Sistema completo e acessível de portfólio autoral com gerenciamento de projetos, blocos de conteúdo, personalização de design tokens e integração Supabase.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
