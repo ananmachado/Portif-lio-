@@ -1,300 +1,34 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { usePortfolio } from '../../context/PortfolioContext';
-import { PRESET_THEMES, calculateContrastRatio, getWCAGStatus } from '../../lib/theme';
+import { PRESET_THEMES, normalizeThemeConfig, calculateContrastRatio, getWCAGStatus } from '../../lib/theme';
 import { ThemeConfig } from '../../types';
-import { Palette, Sparkles, Check, AlertTriangle, Save, RefreshCw } from 'lucide-react';
+import { Palette, Save, Eye, Accessibility, Type, Layout, Navigation, MousePointer2 } from 'lucide-react';
+
+const Field = ({label, children, hint}:{label:string;children:React.ReactNode;hint?:string}) => <label className="block space-y-1.5"><span className="text-xs font-bold">{label}</span>{children}{hint&&<span className="block text-[11px]" style={{color:'var(--theme-text-secondary)'}}>{hint}</span>}</label>;
+const Text = ({value,onChange,placeholder}:{value:string;onChange:(v:string)=>void;placeholder?:string}) => <input value={value} placeholder={placeholder} onChange={e=>onChange(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border text-sm bg-transparent" style={{borderColor:'var(--theme-border)',color:'var(--theme-text-primary)'}}/>;
+const Select = ({value,onChange,children}:{value:string;onChange:(v:string)=>void;children:React.ReactNode}) => <select value={value} onChange={e=>onChange(e.target.value)} className="w-full px-3 py-2.5 rounded-xl border text-sm bg-transparent" style={{borderColor:'var(--theme-border)',color:'var(--theme-text-primary)',backgroundColor:'var(--theme-surface)'}}>{children}</select>;
+const Color = ({label,value,onChange}:{label:string;value:string;onChange:(v:string)=>void}) => <Field label={label}><div className="flex gap-2"><input type="color" value={value} onChange={e=>onChange(e.target.value)} className="h-11 w-12 rounded-lg border cursor-pointer"/><Text value={value} onChange={onChange}/></div></Field>;
 
 export const AdminAppearance: React.FC = () => {
   const { settings, updateSettings, addToast } = usePortfolio();
-
-  const [themeForm, setThemeForm] = useState<ThemeConfig>({
-    ...settings.theme_config,
-  });
-
-  const handleApplyPreset = (presetConfig: ThemeConfig) => {
-    setThemeForm({ ...presetConfig });
-    addToast('info', 'Preset de tema selecionado. Clique em "Salvar Tokens" para confirmar.');
-  };
-
-  const handleSaveTheme = async (e: React.FormEvent) => {
-    e.preventDefault();
-    await updateSettings({
-      theme_config: themeForm,
-    });
-  };
-
-  // Contrast Audit
-  const textBgRatio = calculateContrastRatio(themeForm.colors.textPrimary, themeForm.colors.bg);
-  const textBgStatus = getWCAGStatus(textBgRatio);
-
-  const textSurfaceRatio = calculateContrastRatio(themeForm.colors.textPrimary, themeForm.colors.surface);
-  const textSurfaceStatus = getWCAGStatus(textSurfaceRatio);
-
-  return (
-    <form onSubmit={handleSaveTheme} className="space-y-8 animate-in fade-in duration-300">
-      {/* Header Bar */}
-      <div className="p-6 rounded-2xl border flex flex-col md:flex-row md:items-center justify-between gap-4" style={{ backgroundColor: 'var(--theme-surface)', borderColor: 'var(--theme-border)' }}>
-        <div>
-          <h2 className="text-xl font-bold flex items-center gap-2">
-            <Palette className="w-5 h-5 text-[var(--theme-primary)]" />
-            <span>Design Tokens & Sistema de Aparência</span>
-          </h2>
-          <p className="text-xs text-[var(--theme-text-secondary)] mt-1">
-            Personalize as cores, tipografia, bordas, sombras e tom de voz da interface autoral.
-          </p>
-        </div>
-
-        <button
-          type="submit"
-          className="px-6 py-2.5 rounded-xl font-bold text-sm text-white flex items-center gap-2 shadow-sm transition-transform hover:scale-105"
-          style={{ backgroundColor: 'var(--theme-primary)' }}
-        >
-          <Save className="w-4 h-4" />
-          <span>Salvar Tokens de Design</span>
-        </button>
-      </div>
-
-      {/* WCAG Contrast Auditor Panel */}
-      <div className="p-6 rounded-2xl border space-y-3" style={{ backgroundColor: 'var(--theme-surface)', borderColor: 'var(--theme-border)' }}>
-        <h3 className="text-sm font-bold uppercase tracking-wider flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-amber-500" />
-          <span>Auditor de Contraste e Acessibilidade (WCAG 2.2 AA)</span>
-        </h3>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-          <div className="p-4 rounded-xl border flex items-center justify-between" style={{ backgroundColor: themeForm.colors.bg, borderColor: 'var(--theme-border)' }}>
-            <div>
-              <span className="block text-xs font-bold" style={{ color: themeForm.colors.textPrimary }}>
-                Texto Principal sobre Fundo
-              </span>
-              <span className="text-xs opacity-75" style={{ color: themeForm.colors.textSecondary }}>
-                Razão de Contraste: {textBgRatio.toFixed(2)}:1
-              </span>
-            </div>
-            <span className={`px-2.5 py-1 rounded-lg text-xs font-bold ${textBgStatus.passAA ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}`}>
-              {textBgStatus.label}
-            </span>
-          </div>
-
-          <div className="p-4 rounded-xl border flex items-center justify-between" style={{ backgroundColor: themeForm.colors.surface, borderColor: 'var(--theme-border)' }}>
-            <div>
-              <span className="block text-xs font-bold" style={{ color: themeForm.colors.textPrimary }}>
-                Texto sobre Superfície
-              </span>
-              <span className="text-xs opacity-75" style={{ color: themeForm.colors.textSecondary }}>
-                Razão de Contraste: {textSurfaceRatio.toFixed(2)}:1
-              </span>
-            </div>
-            <span className={`px-2.5 py-1 rounded-lg text-xs font-bold ${textSurfaceStatus.passAA ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}`}>
-              {textSurfaceStatus.label}
-            </span>
-          </div>
-        </div>
-
-        {(!textBgStatus.passAA || !textSurfaceStatus.passAA) && (
-          <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-semibold flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 shrink-0" />
-            <span>Aviso: Alguma das combinações de cores escolhidas não atinge o contraste mínimo de 4.5:1 exigido pela WCAG AA.</span>
-          </div>
-        )}
-      </div>
-
-      {/* Presets Quick Selector */}
-      <div className="p-6 rounded-2xl border space-y-4" style={{ backgroundColor: 'var(--theme-surface)', borderColor: 'var(--theme-border)' }}>
-        <h3 className="text-sm font-bold uppercase tracking-wider">Presets de Temas Visuais</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-          {PRESET_THEMES.map((preset) => (
-            <button
-              key={preset.name}
-              type="button"
-              onClick={() => handleApplyPreset(preset.config)}
-              className="p-4 rounded-xl border text-left space-y-2 transition-all hover:scale-[1.02] focus:outline-none"
-              style={{
-                backgroundColor: preset.config.colors.surface,
-                borderColor: 'var(--theme-border)',
-              }}
-            >
-              <div className="flex items-center gap-1.5">
-                <span className="w-3 h-3 rounded-full" style={{ backgroundColor: preset.config.colors.primary }} />
-                <span className="w-3 h-3 rounded-full" style={{ backgroundColor: preset.config.colors.bg }} />
-                <span className="w-3 h-3 rounded-full" style={{ backgroundColor: preset.config.colors.textPrimary }} />
-              </div>
-              <div>
-                <span className="font-bold text-xs block" style={{ color: preset.config.colors.textPrimary }}>
-                  {preset.name}
-                </span>
-                <p className="text-[10px] line-clamp-2" style={{ color: preset.config.colors.textSecondary }}>
-                  {preset.description}
-                </p>
-              </div>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Colors Section */}
-      <div className="p-6 rounded-2xl border space-y-6" style={{ backgroundColor: 'var(--theme-surface)', borderColor: 'var(--theme-border)' }}>
-        <h3 className="text-sm font-bold uppercase tracking-wider">Tokens de Cor</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="space-y-1">
-            <label className="block text-xs font-bold">Fundo (Background)</label>
-            <div className="flex gap-2 items-center">
-              <input
-                type="color"
-                value={themeForm.colors.bg}
-                onChange={(e) => setThemeForm({ ...themeForm, colors: { ...themeForm.colors, bg: e.target.value } })}
-                className="w-10 h-10 rounded-lg cursor-pointer border"
-              />
-              <input
-                type="text"
-                value={themeForm.colors.bg}
-                onChange={(e) => setThemeForm({ ...themeForm, colors: { ...themeForm.colors, bg: e.target.value } })}
-                className="w-full p-2 border rounded-lg text-xs font-mono"
-              />
-            </div>
-          </div>
-
-          <div className="space-y-1">
-            <label className="block text-xs font-bold">Superfície (Surface)</label>
-            <div className="flex gap-2 items-center">
-              <input
-                type="color"
-                value={themeForm.colors.surface}
-                onChange={(e) => setThemeForm({ ...themeForm, colors: { ...themeForm.colors, surface: e.target.value } })}
-                className="w-10 h-10 rounded-lg cursor-pointer border"
-              />
-              <input
-                type="text"
-                value={themeForm.colors.surface}
-                onChange={(e) => setThemeForm({ ...themeForm, colors: { ...themeForm.colors, surface: e.target.value } })}
-                className="w-full p-2 border rounded-lg text-xs font-mono"
-              />
-            </div>
-          </div>
-
-          <div className="space-y-1">
-            <label className="block text-xs font-bold">Texto Principal</label>
-            <div className="flex gap-2 items-center">
-              <input
-                type="color"
-                value={themeForm.colors.textPrimary}
-                onChange={(e) => setThemeForm({ ...themeForm, colors: { ...themeForm.colors, textPrimary: e.target.value } })}
-                className="w-10 h-10 rounded-lg cursor-pointer border"
-              />
-              <input
-                type="text"
-                value={themeForm.colors.textPrimary}
-                onChange={(e) => setThemeForm({ ...themeForm, colors: { ...themeForm.colors, textPrimary: e.target.value } })}
-                className="w-full p-2 border rounded-lg text-xs font-mono"
-              />
-            </div>
-          </div>
-
-          <div className="space-y-1">
-            <label className="block text-xs font-bold">Cor Primária (Destaque)</label>
-            <div className="flex gap-2 items-center">
-              <input
-                type="color"
-                value={themeForm.colors.primary}
-                onChange={(e) => setThemeForm({ ...themeForm, colors: { ...themeForm.colors, primary: e.target.value } })}
-                className="w-10 h-10 rounded-lg cursor-pointer border"
-              />
-              <input
-                type="text"
-                value={themeForm.colors.primary}
-                onChange={(e) => setThemeForm({ ...themeForm, colors: { ...themeForm.colors, primary: e.target.value } })}
-                className="w-full p-2 border rounded-lg text-xs font-mono"
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Tipografia e Formas */}
-      <div className="p-6 rounded-2xl border space-y-6" style={{ backgroundColor: 'var(--theme-surface)', borderColor: 'var(--theme-border)' }}>
-        <h3 className="text-sm font-bold uppercase tracking-wider">Forma & Grid</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="space-y-1.5">
-            <label className="block text-xs font-bold">Arredondamento das Bordas (Border Radius)</label>
-            <select
-              value={themeForm.shape.borderRadius}
-              onChange={(e) => setThemeForm({ ...themeForm, shape: { ...themeForm.shape, borderRadius: e.target.value } })}
-              className="w-full p-3 rounded-xl border text-xs"
-            >
-              <option value="0px">Reto (0px - Brutalista)</option>
-              <option value="4px">Suave (4px)</option>
-              <option value="12px">Padrão (12px)</option>
-              <option value="20px">Muito Arredondado (20px)</option>
-            </select>
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="block text-xs font-bold">Estilo de Sombra</label>
-            <select
-              value={themeForm.shape.shadowStyle}
-              onChange={(e) => setThemeForm({ ...themeForm, shape: { ...themeForm.shape, shadowStyle: e.target.value as any } })}
-              className="w-full p-3 rounded-xl border text-xs"
-            >
-              <option value="none">Sem sombra (Flat)</option>
-              <option value="soft">Sombra Suave (Moderna)</option>
-              <option value="sharp">Sombra Marcada (Brutalista)</option>
-              <option value="deep">Sombra Profunda (Noturna)</option>
-            </select>
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="block text-xs font-bold">Colunas de Cards em Telas Grandes</label>
-            <select
-              value={themeForm.layout.cardColumns}
-              onChange={(e) => setThemeForm({ ...themeForm, layout: { ...themeForm.layout, cardColumns: e.target.value as any } })}
-              className="w-full p-3 rounded-xl border text-xs"
-            >
-              <option value="1">1 Coluna (Editorial amplo)</option>
-              <option value="2">2 Colunas (Equilibrado)</option>
-              <option value="3">3 Colunas (Grade padrão)</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      {/* UX Writing & Rótulo dos CTAs */}
-      <div className="p-6 rounded-2xl border space-y-6" style={{ backgroundColor: 'var(--theme-surface)', borderColor: 'var(--theme-border)' }}>
-        <h3 className="text-sm font-bold uppercase tracking-wider">UX Writing & Tom de Voz Autoral</h3>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-1.5">
-            <label className="block text-xs font-bold">Rótulo Principal dos Botões (CTA de Abrir Projeto)</label>
-            <select
-              value={themeForm.uxVoice.ctaProject}
-              onChange={(e) => setThemeForm({ ...themeForm, uxVoice: { ...themeForm.uxVoice, ctaProject: e.target.value } })}
-              className="w-full p-3 rounded-xl border text-xs font-semibold"
-            >
-              <option value="Ver projeto">Ver projeto</option>
-              <option value="Explorar">Explorar</option>
-              <option value="Conhecer">Conhecer</option>
-              <option value="Abrir projeto">Abrir projeto</option>
-              <option value="Entrar">Entrar</option>
-              <option value="Descobrir">Descobrir</option>
-            </select>
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="block text-xs font-bold">Tom de Voz Cadastrado</label>
-            <select
-              value={themeForm.uxVoice.tone}
-              onChange={(e) => setThemeForm({ ...themeForm, uxVoice: { ...themeForm.uxVoice, tone: e.target.value as any } })}
-              className="w-full p-3 rounded-xl border text-xs"
-            >
-              <option value="direto">Direto & Claro</option>
-              <option value="informal">Informal & Próximo</option>
-              <option value="poetico">Poético & Sensível</option>
-              <option value="academico">Acadêmico & Crítico</option>
-              <option value="experimental">Experimental & Provocativo</option>
-              <option value="profissional">Profissional & Corporativo</option>
-            </select>
-          </div>
-        </div>
-      </div>
-    </form>
-  );
+  const [themeForm, setThemeForm] = useState<ThemeConfig>(() => normalizeThemeConfig(settings.theme_config));
+  const set = <K extends keyof ThemeConfig>(key:K, value:ThemeConfig[K]) => setThemeForm(prev=>({...prev,[key]:value}));
+  const colors = themeForm.colors;
+  const updateColors = (key:keyof ThemeConfig['colors'], value:string) => set('colors',{...colors,[key]:value});
+  const updateNested = <K extends keyof ThemeConfig>(key:K, value:Partial<ThemeConfig[K]>) => set(key,{...(themeForm[key] as object),...value} as ThemeConfig[K]);
+  const textBg = useMemo(()=>getWCAGStatus(calculateContrastRatio(colors.textPrimary,colors.bg)),[colors]);
+  const textSurface = useMemo(()=>getWCAGStatus(calculateContrastRatio(colors.textPrimary,colors.surface)),[colors]);
+  const save = async(e:React.FormEvent)=>{e.preventDefault();await updateSettings({theme_config:themeForm});addToast('success','Identidade visual salva.');};
+  const preview = () => { document.documentElement.style.setProperty('--theme-preview','1'); window.scrollTo({top:0,behavior:'smooth'}); };
+  return <form onSubmit={save} className="space-y-6">
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"><div><h2 className="text-xl font-bold flex items-center gap-2"><Palette className="w-5 h-5" style={{color:'var(--theme-primary)'}}/>Editor visual completo</h2><p className="text-sm mt-1" style={{color:'var(--theme-text-secondary)'}}>Tudo que estiver aqui pode ser alterado sem editar os componentes públicos.</p></div><div className="flex gap-2"><button type="button" onClick={preview} className="theme-button px-4 py-2.5 border text-sm font-bold flex gap-2 items-center" style={{borderColor:'var(--theme-border)'}}><Eye className="w-4 h-4"/>Pré-visualizar</button><button type="submit" className="theme-button px-5 py-2.5 text-sm font-bold text-white flex gap-2 items-center" style={{backgroundColor:'var(--theme-primary)'}}><Save className="w-4 h-4"/>Salvar tudo</button></div></div>
+    <section className="theme-card p-5 space-y-4"><h3 className="font-bold flex items-center gap-2"><Palette className="w-4 h-4"/>Presets</h3><div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3">{PRESET_THEMES.map(p=><button key={p.name} type="button" onClick={()=>setThemeForm(normalizeThemeConfig(p.config))} className="p-4 rounded-xl border text-left hover:scale-[1.01]" style={{backgroundColor:p.config.colors.surface,borderColor:'var(--theme-border)'}}><div className="flex gap-1.5 mb-3"><i className="w-4 h-4 rounded-full" style={{background:p.config.colors.primary}}/><i className="w-4 h-4 rounded-full" style={{background:p.config.colors.accent}}/><i className="w-4 h-4 rounded-full" style={{background:p.config.colors.textPrimary}}/></div><strong className="text-xs" style={{color:p.config.colors.textPrimary}}>{p.name}</strong><p className="text-[11px] mt-1" style={{color:p.config.colors.textSecondary}}>{p.description}</p></button>)}</div></section>
+    <section className="theme-card p-5 space-y-5"><h3 className="font-bold flex items-center gap-2"><Palette className="w-4 h-4"/>Cores</h3><div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">{Object.entries(colors).map(([key,val])=><Color key={key} label={{bg:'Fundo',surface:'Superfície',textPrimary:'Texto principal',textSecondary:'Texto secundário',primary:'Primária',secondary:'Secundária',accent:'Acento',border:'Bordas',focus:'Foco',success:'Sucesso',warning:'Aviso',error:'Erro'}[key]||key} value={val} onChange={v=>updateColors(key as keyof ThemeConfig['colors'],v)}/>)}</div></section>
+    <section className="theme-card p-5 space-y-5"><h3 className="font-bold flex items-center gap-2"><Type className="w-4 h-4"/>Tipografia</h3><div className="grid md:grid-cols-2 gap-4"><Field label="Fonte dos títulos" hint="Use uma família disponível no navegador ou uma fonte carregada pelo projeto."><Text value={themeForm.typography.fontHeading} onChange={v=>updateNested('typography',{fontHeading:v})}/></Field><Field label="Fonte do corpo"><Text value={themeForm.typography.fontBody} onChange={v=>updateNested('typography',{fontBody:v})}/></Field><Field label="Tamanho base"><Select value={themeForm.typography.baseSize} onChange={v=>updateNested('typography',{baseSize:v})}><option>14px</option><option>15px</option><option>16px</option><option>17px</option><option>18px</option><option>20px</option></Select></Field><Field label="Escala tipográfica"><Text value={String(themeForm.typography.scaleRatio)} onChange={v=>updateNested('typography',{scaleRatio:Number(v)||1.25})}/></Field></div></section>
+    <section className="theme-card p-5 space-y-5"><h3 className="font-bold flex items-center gap-2"><Layout className="w-4 h-4"/>Layout e componentes</h3><div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4"><Field label="Largura máxima"><Select value={themeForm.layout.maxContainerWidth} onChange={v=>updateNested('layout',{maxContainerWidth:v})}><option>960px</option><option>1100px</option><option>1200px</option><option>1320px</option><option>1440px</option><option>1600px</option></Select></Field><Field label="Espaçamento da grade"><Select value={themeForm.layout.gridGap} onChange={v=>updateNested('layout',{gridGap:v})}><option>12px</option><option>16px</option><option>20px</option><option>24px</option><option>32px</option><option>40px</option></Select></Field><Field label="Colunas de projetos"><Select value={themeForm.layout.cardColumns} onChange={v=>updateNested('layout',{cardColumns:v as '1'|'2'|'3'})}><option value="1">1</option><option value="2">2</option><option value="3">3</option></Select></Field><Field label="Arredondamento"><Select value={themeForm.shape.borderRadius} onChange={v=>updateNested('shape',{borderRadius:v})}><option>0px</option><option>4px</option><option>8px</option><option>12px</option><option>20px</option><option>28px</option></Select></Field><Field label="Bordas"><Select value={themeForm.shape.borderWidth} onChange={v=>updateNested('shape',{borderWidth:v})}><option>0px</option><option>1px</option><option>2px</option><option>3px</option></Select></Field><Field label="Sombra"><Select value={themeForm.shape.shadowStyle} onChange={v=>updateNested('shape',{shadowStyle:v as ThemeConfig['shape']['shadowStyle']})}><option value="none">Nenhuma</option><option value="soft">Suave</option><option value="sharp">Marcada</option><option value="deep">Profunda</option></Select></Field><Field label="Estilo de botões"><Select value={themeForm.components.buttonStyle} onChange={v=>updateNested('components',{buttonStyle:v as ThemeConfig['components']['buttonStyle']})}><option value="solid">Sólido</option><option value="outline">Contorno</option><option value="soft">Suave</option></Select></Field><Field label="Estilo dos cards"><Select value={themeForm.components.cardStyle} onChange={v=>updateNested('components',{cardStyle:v as ThemeConfig['components']['cardStyle']})}><option value="flat">Plano</option><option value="bordered">Com borda</option><option value="elevated">Elevado</option></Select></Field><label className="flex items-center gap-3 text-sm font-semibold pt-7"><input type="checkbox" checked={themeForm.components.hoverLift} onChange={e=>updateNested('components',{hoverLift:e.target.checked})}/> Elevar elementos no hover</label></div></section>
+    <section className="theme-card p-5 space-y-5"><h3 className="font-bold flex items-center gap-2"><Navigation className="w-4 h-4"/>Marca e navegação</h3><div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4"><Field label="Logo"><Select value={themeForm.brand.logoMode} onChange={v=>updateNested('brand',{logoMode:v as ThemeConfig['brand']['logoMode']})}><option value="initial">Inicial</option><option value="name">Nome</option><option value="none">Sem símbolo</option></Select></Field><Field label="Cabeçalho"><Select value={themeForm.brand.headerStyle} onChange={v=>updateNested('brand',{headerStyle:v as ThemeConfig['brand']['headerStyle']})}><option value="solid">Sólido</option><option value="glass">Vidro</option><option value="transparent">Transparente</option></Select></Field><Field label="Espaçamento do cabeçalho"><Select value={themeForm.brand.headerPadding} onChange={v=>updateNested('brand',{headerPadding:v as ThemeConfig['brand']['headerPadding']})}><option value="compact">Compacto</option><option value="normal">Normal</option><option value="large">Grande</option></Select></Field><Field label="Texto: Projetos"><Text value={themeForm.navigation.projectsLabel} onChange={v=>updateNested('navigation',{projectsLabel:v})}/></Field><Field label="Texto: Sobre"><Text value={themeForm.navigation.aboutLabel} onChange={v=>updateNested('navigation',{aboutLabel:v})}/></Field><Field label="Texto: Contato"><Text value={themeForm.navigation.contactLabel} onChange={v=>updateNested('navigation',{contactLabel:v})}/></Field><Field label="Texto: Admin"><Text value={themeForm.navigation.adminLabel} onChange={v=>updateNested('navigation',{adminLabel:v})}/></Field><Field label="Texto: Admin logado"><Text value={themeForm.navigation.authenticatedAdminLabel} onChange={v=>updateNested('navigation',{authenticatedAdminLabel:v})}/></Field><label className="flex items-center gap-3 text-sm font-semibold pt-7"><input type="checkbox" checked={themeForm.navigation.showAdminLink} onChange={e=>updateNested('navigation',{showAdminLink:e.target.checked})}/> Mostrar acesso ao Admin</label><label className="flex items-center gap-3 text-sm font-semibold"><input type="checkbox" checked={themeForm.brand.showTagline} onChange={e=>updateNested('brand',{showTagline:e.target.checked})}/> Mostrar tagline</label></div></section>
+    <section className="theme-card p-5 space-y-5"><h3 className="font-bold flex items-center gap-2"><Accessibility className="w-4 h-4"/>Acessibilidade</h3><div className="grid md:grid-cols-3 gap-4"><Field label="Tamanho mínimo de texto"><Select value={themeForm.accessibility.minimumTextSize} onChange={v=>updateNested('accessibility',{minimumTextSize:v})}><option>14px</option><option>15px</option><option>16px</option><option>17px</option><option>18px</option></Select></Field><label className="flex items-center gap-3 text-sm font-semibold pt-7"><input type="checkbox" checked={themeForm.accessibility.underlineLinks} onChange={e=>updateNested('accessibility',{underlineLinks:e.target.checked})}/> Sublinhado em links</label><label className="flex items-center gap-3 text-sm font-semibold pt-7"><input type="checkbox" checked={themeForm.accessibility.strongFocus} onChange={e=>updateNested('accessibility',{strongFocus:e.target.checked})}/> Foco de teclado forte</label></div><div className="grid md:grid-cols-2 gap-4"><Audit title="Texto sobre fundo" ratio={calculateContrastRatio(colors.textPrimary,colors.bg)} status={textBg.label}/><Audit title="Texto sobre superfície" ratio={calculateContrastRatio(colors.textPrimary,colors.surface)} status={textSurface.label}/></div></section>
+    <section className="theme-card p-5 space-y-5"><h3 className="font-bold flex items-center gap-2"><MousePointer2 className="w-4 h-4"/>Movimento e voz</h3><div className="grid md:grid-cols-2 gap-4"><Field label="Duração das animações"><Select value={themeForm.motion.duration} onChange={v=>updateNested('motion',{duration:v})}><option>0ms</option><option>150ms</option><option>250ms</option><option>350ms</option><option>500ms</option></Select></Field><label className="flex items-center gap-3 text-sm font-semibold pt-7"><input type="checkbox" checked={themeForm.motion.reducedMotion} onChange={e=>updateNested('motion',{reducedMotion:e.target.checked})}/> Respeitar preferência de movimento reduzido</label><Field label="CTA de projeto"><Text value={themeForm.uxVoice.ctaProject} onChange={v=>updateNested('uxVoice',{ctaProject:v})}/></Field></div></section>
+  </form>;
 };
+function Audit({title,ratio,status}:{title:string;ratio:number;status:string}){return <div className="p-4 rounded-xl border flex items-center justify-between" style={{borderColor:'var(--theme-border)'}}><div><strong className="text-sm">{title}</strong><div className="text-xs mt-1" style={{color:'var(--theme-text-secondary)'}}>{ratio.toFixed(2)}:1</div></div><span className="text-xs font-bold px-2.5 py-1 rounded-lg" style={{backgroundColor:ratio>=4.5?'#DCFCE7':'#FEE2E2',color:ratio>=4.5?'#166534':'#991B1B'}}>{status}</span></div>}
