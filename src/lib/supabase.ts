@@ -264,8 +264,44 @@ CREATE POLICY "Dono autenticado pode gerenciar blocos" ON public.project_blocks
 -- ====================================================================
 -- CONFIGURAÇÃO DO SUPABASE STORAGE (BUCKET 'portfolio-media')
 -- ====================================================================
--- Execute na aba Storage do Supabase: Crie um bucket público chamado 'portfolio-media'
--- Políticas para o bucket 'portfolio-media':
--- SELECT: público para todos
--- INSERT/UPDATE/DELETE: apenas usuários autenticados (auth.role() = 'authenticated')
+-- O bucket é público para leitura, mas upload/alteração/remoção exigem
+-- uma sessão autenticada. A aplicação salva fotos em:
+-- profile/<USER_ID>/<ARQUIVO>
+
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('portfolio-media', 'portfolio-media', true)
+ON CONFLICT (id) DO UPDATE SET public = true;
+
+DROP POLICY IF EXISTS "Public can view portfolio media" ON storage.objects;
+CREATE POLICY "Public can view portfolio media"
+ON storage.objects FOR SELECT
+USING (bucket_id = 'portfolio-media');
+
+DROP POLICY IF EXISTS "Users can upload their portfolio media" ON storage.objects;
+CREATE POLICY "Users can upload their portfolio media"
+ON storage.objects FOR INSERT TO authenticated
+WITH CHECK (
+  bucket_id = 'portfolio-media'
+  AND (storage.foldername(name))[2] = auth.uid()::text
+);
+
+DROP POLICY IF EXISTS "Users can update their portfolio media" ON storage.objects;
+CREATE POLICY "Users can update their portfolio media"
+ON storage.objects FOR UPDATE TO authenticated
+USING (
+  bucket_id = 'portfolio-media'
+  AND (storage.foldername(name))[2] = auth.uid()::text
+)
+WITH CHECK (
+  bucket_id = 'portfolio-media'
+  AND (storage.foldername(name))[2] = auth.uid()::text
+);
+
+DROP POLICY IF EXISTS "Users can delete their portfolio media" ON storage.objects;
+CREATE POLICY "Users can delete their portfolio media"
+ON storage.objects FOR DELETE TO authenticated
+USING (
+  bucket_id = 'portfolio-media'
+  AND (storage.foldername(name))[2] = auth.uid()::text
+);
 `;
