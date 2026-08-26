@@ -78,9 +78,9 @@ export const AdminDatabaseSetup: React.FC = () => {
           </div>
 
           <div className="p-4 rounded-xl border space-y-2" style={{ backgroundColor: 'var(--theme-bg)', borderColor: 'var(--theme-border)' }}>
-            <span className="font-bold text-xs uppercase text-[var(--theme-primary)]">Passo 4: Criar Bucket de Storage</span>
+            <span className="font-bold text-xs uppercase text-[var(--theme-primary)]">Passo 4: Ativar o Storage</span>
             <p className="text-xs text-[var(--theme-text-secondary)]">
-              Na aba <strong>Storage</strong>, crie um bucket público com o nome <strong>`portfolio-media`</strong> para armazenar imagens e áudios.
+              O script SQL abaixo cria o bucket público <strong>`portfolio-media`</strong> e as políticas. O upload exige uma sessão autenticada do Supabase.
             </p>
           </div>
         </div>
