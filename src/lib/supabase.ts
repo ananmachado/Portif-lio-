@@ -2,18 +2,28 @@ import { createClient } from '@supabase/supabase-js';
 import { PortfolioSettings, Category, Project, ProjectBlock } from '../types';
 import { DEFAULT_THEME_CONFIG } from './theme';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL || '').trim();
+const supabaseAnonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY || '').trim();
+
+export const SUPABASE_ADMIN_EMAIL = (import.meta.env.VITE_SUPABASE_ADMIN_EMAIL || '').trim();
 
 export const isSupabaseConfigured = Boolean(
-  supabaseUrl && 
-  supabaseAnonKey && 
-  !supabaseUrl.includes('your-supabase-project') &&
-  supabaseUrl.startsWith('https://')
+  supabaseUrl &&
+  supabaseAnonKey &&
+  supabaseUrl.startsWith('https://') &&
+  supabaseUrl.includes('.supabase.co') &&
+  !supabaseUrl.includes('SEU-PROJETO') &&
+  !supabaseAnonKey.includes('SUA_CHAVE')
 );
 
 export const supabase = isSupabaseConfigured
-  ? createClient(supabaseUrl, supabaseAnonKey)
+  ? createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+      },
+    })
   : null;
 
 // Initial Default Data for Local Fallback & First-time Boot
@@ -139,14 +149,15 @@ export const INITIAL_BLOCKS: ProjectBlock[] = [
 
 // SQL Schema Definition for Supabase Database setup
 export const SUPABASE_SQL_SCHEMA = `-- ====================================================================
--- SCHEMA COMPLETO PARA SUPABASE - PORTFÓLIO PESSOAL AUTORAL
--- Execute este script no SQL Editor do seu projeto Supabase
+-- SUPABASE SETUP - PORTFÓLIO PESSOAL AUTORAL
+-- Pode ser executado novamente: políticas conhecidas são recriadas.
 -- ====================================================================
 
--- 1. TABELA DE CONFIGURAÇÕES DO PORTFÓLIO
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
 CREATE TABLE IF NOT EXISTS public.portfolio_settings (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  owner_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  owner_id UUID NOT NULL DEFAULT auth.uid() REFERENCES auth.users(id) ON DELETE CASCADE,
   portfolio_name TEXT NOT NULL DEFAULT 'Meu Portfólio Autoral',
   tagline TEXT,
   about_title TEXT,
@@ -163,10 +174,9 @@ CREATE TABLE IF NOT EXISTS public.portfolio_settings (
   updated_at TIMESTAMPTZ DEFAULT now()
 );
 
--- 2. TABELA DE CATEGORIAS
 CREATE TABLE IF NOT EXISTS public.categories (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  owner_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  owner_id UUID NOT NULL DEFAULT auth.uid() REFERENCES auth.users(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   slug TEXT NOT NULL,
   description TEXT,
@@ -174,13 +184,12 @@ CREATE TABLE IF NOT EXISTS public.categories (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- 3. TABELA DE PROJETOS
 CREATE TABLE IF NOT EXISTS public.projects (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  owner_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  owner_id UUID NOT NULL DEFAULT auth.uid() REFERENCES auth.users(id) ON DELETE CASCADE,
   category_id UUID REFERENCES public.categories(id) ON DELETE SET NULL,
   title TEXT NOT NULL,
-  slug TEXT NOT NULL UNIQUE,
+  slug TEXT NOT NULL,
   short_description TEXT,
   cover_image TEXT,
   year TEXT,
@@ -191,10 +200,9 @@ CREATE TABLE IF NOT EXISTS public.projects (
   updated_at TIMESTAMPTZ DEFAULT now()
 );
 
--- 4. TABELA DE BLOCOS DE CONTEÚDO
 CREATE TABLE IF NOT EXISTS public.project_blocks (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  project_id UUID REFERENCES public.projects(id) ON DELETE CASCADE,
+  project_id UUID NOT NULL REFERENCES public.projects(id) ON DELETE CASCADE,
   type TEXT NOT NULL CHECK (type IN ('texto', 'imagem', 'youtube', 'audio')),
   content TEXT,
   media_url TEXT,
@@ -205,79 +213,121 @@ CREATE TABLE IF NOT EXISTS public.project_blocks (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- ====================================================================
--- ROW LEVEL SECURITY (RLS) POLICIES
--- ====================================================================
+-- Compatibilidade com tabelas já criadas por versões anteriores.
+ALTER TABLE public.portfolio_settings ALTER COLUMN owner_id SET DEFAULT auth.uid();
+ALTER TABLE public.categories ALTER COLUMN owner_id SET DEFAULT auth.uid();
+ALTER TABLE public.projects ALTER COLUMN owner_id SET DEFAULT auth.uid();
 
--- Habilitar RLS em todas as tabelas
+-- A versão antiga criava slug globalmente UNIQUE. Para permitir um projeto
+-- Supabase compartilhado por mais de um usuário, a unicidade passa a ser por dono.
+ALTER TABLE public.projects DROP CONSTRAINT IF EXISTS projects_slug_key;
+CREATE UNIQUE INDEX IF NOT EXISTS portfolio_settings_owner_uidx ON public.portfolio_settings(owner_id);
+CREATE UNIQUE INDEX IF NOT EXISTS projects_owner_slug_uidx ON public.projects(owner_id, slug);
+CREATE INDEX IF NOT EXISTS categories_owner_idx ON public.categories(owner_id);
+CREATE INDEX IF NOT EXISTS projects_owner_idx ON public.projects(owner_id);
+CREATE INDEX IF NOT EXISTS project_blocks_project_idx ON public.project_blocks(project_id);
+
 ALTER TABLE public.portfolio_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.projects ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.project_blocks ENABLE ROW LEVEL SECURITY;
 
--- POLÍTICAS: portfolio_settings
-CREATE POLICY "Visitantes podem ver configuracoes" ON public.portfolio_settings
-  FOR SELECT USING (true);
+-- Remove políticas das versões anteriores e desta versão antes de recriar.
+DROP POLICY IF EXISTS "Visitantes podem ver configuracoes" ON public.portfolio_settings;
+DROP POLICY IF EXISTS "Dono autenticado pode gerenciar configuracoes" ON public.portfolio_settings;
+DROP POLICY IF EXISTS "Ver configuracoes" ON public.portfolio_settings;
+DROP POLICY IF EXISTS "Public read portfolio settings" ON public.portfolio_settings;
+DROP POLICY IF EXISTS "Owner manages portfolio settings" ON public.portfolio_settings;
 
-CREATE POLICY "Dono autenticado pode gerenciar configuracoes" ON public.portfolio_settings
-  FOR ALL USING (auth.uid() = owner_id) WITH CHECK (auth.uid() = owner_id);
+DROP POLICY IF EXISTS "Visitantes podem ver categorias" ON public.categories;
+DROP POLICY IF EXISTS "Dono autenticado pode gerenciar categorias" ON public.categories;
+DROP POLICY IF EXISTS "Ver categorias" ON public.categories;
+DROP POLICY IF EXISTS "Public read categories" ON public.categories;
+DROP POLICY IF EXISTS "Owner manages categories" ON public.categories;
 
--- POLÍTICAS: categories
-CREATE POLICY "Visitantes podem ver categorias" ON public.categories
-  FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Visitantes podem ver apenas projetos publicados" ON public.projects;
+DROP POLICY IF EXISTS "Dono autenticado pode gerenciar projetos" ON public.projects;
+DROP POLICY IF EXISTS "Ver projetos publicados" ON public.projects;
+DROP POLICY IF EXISTS "Public read published projects" ON public.projects;
+DROP POLICY IF EXISTS "Owner manages projects" ON public.projects;
 
-CREATE POLICY "Dono autenticado pode gerenciar categorias" ON public.categories
-  FOR ALL USING (auth.uid() = owner_id) WITH CHECK (auth.uid() = owner_id);
+DROP POLICY IF EXISTS "Visitantes podem ver blocos de projetos publicados" ON public.project_blocks;
+DROP POLICY IF EXISTS "Dono autenticado pode gerenciar blocos" ON public.project_blocks;
+DROP POLICY IF EXISTS "Ver blocos" ON public.project_blocks;
+DROP POLICY IF EXISTS "Public read published project blocks" ON public.project_blocks;
+DROP POLICY IF EXISTS "Owner manages project blocks" ON public.project_blocks;
 
--- POLÍTICAS: projects
-CREATE POLICY "Visitantes podem ver apenas projetos publicados" ON public.projects
-  FOR SELECT USING (status = 'publicado' OR auth.uid() = owner_id);
+CREATE POLICY "Public read portfolio settings"
+ON public.portfolio_settings FOR SELECT
+USING (true);
 
-CREATE POLICY "Dono autenticado pode gerenciar projetos" ON public.projects
-  FOR ALL USING (auth.uid() = owner_id) WITH CHECK (auth.uid() = owner_id);
+CREATE POLICY "Owner manages portfolio settings"
+ON public.portfolio_settings FOR ALL TO authenticated
+USING (auth.uid() = owner_id)
+WITH CHECK (auth.uid() = owner_id);
 
--- POLÍTICAS: project_blocks
-CREATE POLICY "Visitantes podem ver blocos de projetos publicados" ON public.project_blocks
-  FOR SELECT USING (
-    EXISTS (
-      SELECT 1 FROM public.projects 
-      WHERE projects.id = project_blocks.project_id 
-      AND (projects.status = 'publicado' OR projects.owner_id = auth.uid())
-    )
-  );
+CREATE POLICY "Public read categories"
+ON public.categories FOR SELECT
+USING (true);
 
-CREATE POLICY "Dono autenticado pode gerenciar blocos" ON public.project_blocks
-  FOR ALL USING (
-    EXISTS (
-      SELECT 1 FROM public.projects 
-      WHERE projects.id = project_blocks.project_id 
-      AND projects.owner_id = auth.uid()
-    )
-  ) WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM public.projects 
-      WHERE projects.id = project_blocks.project_id 
-      AND projects.owner_id = auth.uid()
-    )
-  );
+CREATE POLICY "Owner manages categories"
+ON public.categories FOR ALL TO authenticated
+USING (auth.uid() = owner_id)
+WITH CHECK (auth.uid() = owner_id);
+
+CREATE POLICY "Public read published projects"
+ON public.projects FOR SELECT
+USING (status = 'publicado' OR auth.uid() = owner_id);
+
+CREATE POLICY "Owner manages projects"
+ON public.projects FOR ALL TO authenticated
+USING (auth.uid() = owner_id)
+WITH CHECK (auth.uid() = owner_id);
+
+CREATE POLICY "Public read published project blocks"
+ON public.project_blocks FOR SELECT
+USING (
+  EXISTS (
+    SELECT 1
+    FROM public.projects p
+    WHERE p.id = project_blocks.project_id
+      AND (p.status = 'publicado' OR p.owner_id = auth.uid())
+  )
+);
+
+CREATE POLICY "Owner manages project blocks"
+ON public.project_blocks FOR ALL TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.projects p
+    WHERE p.id = project_blocks.project_id
+      AND p.owner_id = auth.uid()
+  )
+)
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM public.projects p
+    WHERE p.id = project_blocks.project_id
+      AND p.owner_id = auth.uid()
+  )
+);
 
 -- ====================================================================
--- CONFIGURAÇÃO DO SUPABASE STORAGE (BUCKET 'portfolio-media')
+-- STORAGE
 -- ====================================================================
--- O bucket é público para leitura, mas upload/alteração/remoção exigem
--- uma sessão autenticada. A aplicação salva fotos em:
--- profile/<USER_ID>/<ARQUIVO>
-
 INSERT INTO storage.buckets (id, name, public)
 VALUES ('portfolio-media', 'portfolio-media', true)
 ON CONFLICT (id) DO UPDATE SET public = true;
 
 DROP POLICY IF EXISTS "Public can view portfolio media" ON storage.objects;
+DROP POLICY IF EXISTS "Users can upload their portfolio media" ON storage.objects;
+DROP POLICY IF EXISTS "Users can update their portfolio media" ON storage.objects;
+DROP POLICY IF EXISTS "Users can delete their portfolio media" ON storage.objects;
+
 CREATE POLICY "Public can view portfolio media"
 ON storage.objects FOR SELECT
 USING (bucket_id = 'portfolio-media');
 
-DROP POLICY IF EXISTS "Users can upload their portfolio media" ON storage.objects;
 CREATE POLICY "Users can upload their portfolio media"
 ON storage.objects FOR INSERT TO authenticated
 WITH CHECK (
@@ -285,7 +335,6 @@ WITH CHECK (
   AND (storage.foldername(name))[2] = auth.uid()::text
 );
 
-DROP POLICY IF EXISTS "Users can update their portfolio media" ON storage.objects;
 CREATE POLICY "Users can update their portfolio media"
 ON storage.objects FOR UPDATE TO authenticated
 USING (
@@ -297,7 +346,6 @@ WITH CHECK (
   AND (storage.foldername(name))[2] = auth.uid()::text
 );
 
-DROP POLICY IF EXISTS "Users can delete their portfolio media" ON storage.objects;
 CREATE POLICY "Users can delete their portfolio media"
 ON storage.objects FOR DELETE TO authenticated
 USING (
