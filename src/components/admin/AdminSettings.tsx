@@ -1,13 +1,17 @@
 import React, { useState } from 'react';
 import { usePortfolio } from '../../context/PortfolioContext';
 import { SocialLink } from '../../types';
-import { Save, Plus, Trash2, User, Globe, Phone, Mail, MapPin } from 'lucide-react';
+import { Save, Plus, Trash2, User, Globe, Phone, Mail, MapPin, Upload, X, Loader2, Image as ImageIcon } from 'lucide-react';
+import { isSupabaseConfigured, supabase } from '../../lib/supabase';
+import { PROFILE_IMAGE_ACCEPT, PROFILE_IMAGE_MAX_BYTES, removeProfileImage, uploadProfileImage, validateProfileImage } from '../../lib/storage';
 
 export const AdminSettings: React.FC = () => {
   const { settings, updateSettings, addToast } = usePortfolio();
 
   const [form, setForm] = useState({ ...settings });
   const [socialLinks, setSocialLinks] = useState<SocialLink[]>(settings.social_links || []);
+  const [isUploadingProfile, setIsUploadingProfile] = useState(false);
+  const [profilePreview, setProfilePreview] = useState(settings.profile_image || '');
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -15,6 +19,88 @@ export const AdminSettings: React.FC = () => {
       ...form,
       social_links: socialLinks,
     });
+  };
+
+  const handleProfileImageChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+
+    if (!file) return;
+
+    const validationError = validateProfileImage(file);
+    if (validationError) {
+      addToast('error', validationError);
+      return;
+    }
+
+    const localPreview = URL.createObjectURL(file);
+    setProfilePreview(localPreview);
+    setIsUploadingProfile(true);
+
+    try {
+      if (!isSupabaseConfigured) {
+        throw new Error('O Supabase não está configurado. Configure VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY na Vercel antes de enviar arquivos.');
+      }
+
+      const previousUrl = form.profile_image;
+      const publicUrl = await uploadProfileImage(file);
+
+      setForm((prev) => ({ ...prev, profile_image: publicUrl }));
+      setProfilePreview(publicUrl);
+
+      try {
+        await updateSettings({ profile_image: publicUrl });
+
+        // updateSettings também mantém o estado local. Esta leitura confirma que
+        // o endereço realmente foi persistido no banco antes de remover a foto antiga.
+        if (supabase) {
+          const { data: savedSettings, error: verifyError } = await supabase
+            .from('portfolio_settings')
+            .select('profile_image')
+            .eq('id', settings.id)
+            .maybeSingle();
+
+          if (verifyError || savedSettings?.profile_image !== publicUrl) {
+            throw new Error('A foto foi enviada, mas o endereço não foi confirmado no banco de dados. Verifique as políticas RLS de portfolio_settings.');
+          }
+        }
+
+        if (previousUrl && previousUrl !== publicUrl) {
+          await removeProfileImage(previousUrl);
+        }
+        addToast('success', 'Foto de perfil enviada e salva com sucesso.');
+      } catch (saveError) {
+        console.error('Profile image settings save error:', saveError);
+        addToast('error', saveError instanceof Error ? saveError.message : 'A foto foi enviada, mas não foi possível salvar o endereço no perfil.');
+      }
+    } catch (error) {
+      console.error('Profile image upload error:', error);
+      const message = error instanceof Error ? error.message : 'Não foi possível enviar a foto.';
+      addToast('error', message);
+      setProfilePreview(form.profile_image || '');
+    } finally {
+      URL.revokeObjectURL(localPreview);
+      setIsUploadingProfile(false);
+    }
+  };
+
+  const handleRemoveProfileImage = async () => {
+    const currentUrl = form.profile_image;
+    if (!currentUrl) return;
+
+    setIsUploadingProfile(true);
+    try {
+      await removeProfileImage(currentUrl);
+      setForm((prev) => ({ ...prev, profile_image: '' }));
+      setProfilePreview('');
+      await updateSettings({ profile_image: '' });
+      addToast('success', 'Foto de perfil removida.');
+    } catch (error) {
+      console.error('Profile image removal error:', error);
+      addToast('error', 'Não foi possível remover a foto de perfil.');
+    } finally {
+      setIsUploadingProfile(false);
+    }
   };
 
   const handleAddSocialLink = () => {
@@ -82,20 +168,85 @@ export const AdminSettings: React.FC = () => {
             />
           </div>
 
-          {/* Imagem de Perfil URL */}
-          <div className="space-y-1.5 md:col-span-2">
-            <label htmlFor="settings-profile-image" className="block text-xs font-bold uppercase tracking-wider">
-              URL da Fotografia de Perfil
-            </label>
-            <input
-              id="settings-profile-image"
-              type="url"
-              value={form.profile_image}
-              onChange={(e) => setForm({ ...form, profile_image: e.target.value })}
-              placeholder="https://images.unsplash.com/..."
-              className="w-full px-4 py-3 rounded-xl border text-sm focus:outline-none"
-              style={{ backgroundColor: 'var(--theme-bg)', borderColor: 'var(--theme-border)' }}
-            />
+          {/* Imagem de Perfil — Supabase Storage */}
+          <div className="space-y-4 md:col-span-2 p-5 rounded-2xl border" style={{ backgroundColor: 'var(--theme-bg)', borderColor: 'var(--theme-border)' }}>
+            <div>
+              <h3 className="text-sm font-bold flex items-center gap-2">
+                <ImageIcon className="w-4 h-4 text-[var(--theme-primary)]" />
+                Foto de perfil
+              </h3>
+              <p className="text-xs mt-1" style={{ color: 'var(--theme-text-secondary)' }}>
+                Envie JPG, PNG, WebP ou AVIF de até 5 MB. A imagem será armazenada no Supabase Storage.
+              </p>
+            </div>
+
+            <div className="flex flex-col md:flex-row gap-5 md:items-center">
+              <div className="w-32 h-32 shrink-0 rounded-2xl overflow-hidden border-2 flex items-center justify-center" style={{ backgroundColor: 'var(--theme-surface)', borderColor: 'var(--theme-border)' }}>
+                {profilePreview ? (
+                  <img src={profilePreview} alt="Pré-visualização da foto de perfil" className="w-full h-full object-cover" />
+                ) : (
+                  <User className="w-10 h-10 opacity-40" aria-hidden="true" />
+                )}
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex flex-wrap gap-2">
+                  <label
+                    htmlFor="settings-profile-image-upload"
+                    className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-white cursor-pointer transition-opacity ${isUploadingProfile ? 'opacity-60 pointer-events-none' : 'hover:opacity-90'}`}
+                    style={{ backgroundColor: 'var(--theme-primary)' }}
+                  >
+                    {isUploadingProfile ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                    {isUploadingProfile ? 'Enviando...' : 'Escolher foto'}
+                  </label>
+                  <input
+                    id="settings-profile-image-upload"
+                    type="file"
+                    accept={PROFILE_IMAGE_ACCEPT}
+                    onChange={handleProfileImageChange}
+                    disabled={isUploadingProfile}
+                    className="sr-only"
+                  />
+
+                  {form.profile_image && (
+                    <button
+                      type="button"
+                      onClick={handleRemoveProfileImage}
+                      disabled={isUploadingProfile}
+                      className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold border hover:opacity-80 disabled:opacity-50"
+                      style={{ borderColor: 'var(--theme-border)', backgroundColor: 'var(--theme-surface)' }}
+                    >
+                      <X className="w-4 h-4" />
+                      Remover
+                    </button>
+                  )}
+                </div>
+
+                <p className="text-[11px]" style={{ color: 'var(--theme-text-secondary)' }}>
+                  Limite: {Math.round(PROFILE_IMAGE_MAX_BYTES / (1024 * 1024))} MB.
+                  {isSupabaseConfigured ? ' O upload usa sua sessão autenticada do Supabase.' : ' O Supabase ainda não está configurado.'}
+                </p>
+              </div>
+            </div>
+
+            {/* Campo avançado: mantém compatibilidade com imagens externas existentes. */}
+            <details>
+              <summary className="cursor-pointer text-xs font-bold" style={{ color: 'var(--theme-text-secondary)' }}>
+                Usar uma URL externa (opcional)
+              </summary>
+              <div className="mt-3">
+                <label htmlFor="settings-profile-image-url" className="sr-only">URL externa da fotografia de perfil</label>
+                <input
+                  id="settings-profile-image-url"
+                  type="url"
+                  value={form.profile_image}
+                  onChange={(e) => { setForm({ ...form, profile_image: e.target.value }); setProfilePreview(e.target.value); }}
+                  placeholder="https://exemplo.com/minha-foto.jpg"
+                  className="w-full px-4 py-3 rounded-xl border text-sm focus:outline-none"
+                  style={{ backgroundColor: 'var(--theme-surface)', borderColor: 'var(--theme-border)' }}
+                />
+              </div>
+            </details>
           </div>
 
           {/* Biografia Curta */}
