@@ -1,4 +1,4 @@
-import { assertSupabaseServerConfig, ENV } from "./_core/env";
+import { ENV } from "./_core/env";
 import type {
   Category,
   InsertCategory,
@@ -13,7 +13,11 @@ import type {
 } from "../drizzle/schema";
 
 function getSupabaseConfig() {
-  assertSupabaseServerConfig();
+  if (!ENV.supabaseUrl || !ENV.supabaseSecretKey) {
+    throw new Error(
+      "Supabase is not configured. Set SUPABASE_URL and SUPABASE_SECRET_KEY (or the legacy SUPABASE_SERVICE_ROLE_KEY) in Vercel.",
+    );
+  }
 
   return {
     baseUrl: ENV.supabaseUrl.replace(/\/+$/, ""),
