@@ -1,16 +1,13 @@
 import type { Express, Request, Response } from "express";
 import { parse as parseCookieHeader } from "cookie";
-import {
-  assertSupabaseAuthConfig,
-  ENV,
-} from "./_core/env";
+import { ENV } from "./_core/env";
 import { getUserByOpenId, upsertUser } from "./db";
 import type { User } from "../drizzle/schema";
 
 const ACCESS_COOKIE = "portfolio-sb-access";
 const REFRESH_COOKIE = "portfolio-sb-refresh";
 const ACCESS_FALLBACK_MAX_AGE_MS = 60 * 60 * 1000;
-const REFRESH_MAX_AGE_MS = 365 * 24 * 60 * 60 * 1000;
+const REFRESH_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 
 type SupabaseAuthUser = {
   id?: string;
@@ -31,7 +28,11 @@ type SupabaseSessionResponse = {
 };
 
 function authConfig() {
-  assertSupabaseAuthConfig();
+  if (!ENV.supabaseUrl || !ENV.supabasePublishableKey) {
+    throw new Error(
+      "Supabase Auth não está configurado no servidor. Defina SUPABASE_URL e SUPABASE_PUBLISHABLE_KEY na Vercel.",
+    );
+  }
 
   return {
     baseUrl: ENV.supabaseUrl.replace(/\/+$/, ""),
@@ -73,10 +74,9 @@ function setSessionCookies(
 
   if (session.access_token) {
     const expiresIn = Number(session.expires_in);
-    const maxAge =
-      Number.isFinite(expiresIn) && expiresIn > 0
-        ? expiresIn * 1000
-        : ACCESS_FALLBACK_MAX_AGE_MS;
+    const maxAge = Number.isFinite(expiresIn) && expiresIn > 0
+      ? expiresIn * 1000
+      : ACCESS_FALLBACK_MAX_AGE_MS;
 
     res.cookie(ACCESS_COOKIE, session.access_token, { ...base, maxAge });
   }
@@ -91,7 +91,7 @@ function setSessionCookies(
   disableCaching(res);
 }
 
-export function clearPortfolioSessionCookies(req: Request, res: Response) {
+function clearSessionCookies(req: Request, res: Response) {
   const base = cookieOptions(req);
   res.clearCookie(ACCESS_COOKIE, base);
   res.clearCookie(REFRESH_COOKIE, base);
@@ -114,7 +114,6 @@ async function supabaseAuth(
 
   const text = await response.text();
   let data: SupabaseSessionResponse = {};
-
   try {
     data = text ? (JSON.parse(text) as SupabaseSessionResponse) : {};
   } catch {
@@ -188,15 +187,15 @@ async function refreshSession(req: Request, res: Response) {
     setSessionCookies(req, res, data);
     return data;
   } catch {
-    clearPortfolioSessionCookies(req, res);
+    clearSessionCookies(req, res);
     return null;
   }
 }
 
 /**
- * Resolve a signed-in portfolio user from server-managed HTTP-only cookies.
- * The browser never receives a Supabase API key and never stores Supabase
- * access/refresh tokens in localStorage or sessionStorage.
+ * Resolves the authenticated Supabase user using HTTP-only cookies only.
+ * No access token, refresh token or Supabase API key is stored in localStorage
+ * or exposed through the Vite bundle.
  */
 export async function resolveAuthenticatedPortfolioUser(
   req: Request,
@@ -209,9 +208,7 @@ export async function resolveAuthenticatedPortfolioUser(
   if (!authUser) {
     const refreshed = await refreshSession(req, res);
     accessToken = refreshed?.access_token;
-    authUser =
-      refreshed?.user ??
-      (accessToken ? await fetchSupabaseUser(accessToken) : null);
+    authUser = refreshed?.user ?? (accessToken ? await fetchSupabaseUser(accessToken) : null);
   }
 
   if (!authUser?.id) return null;
@@ -219,14 +216,55 @@ export async function resolveAuthenticatedPortfolioUser(
 }
 
 export function registerSupabaseAuthRoutes(app: Express) {
+  app.post("/api/auth/signup", async (req, res) => {
+    disableCaching(res);
+    try {
+      const email = String(req.body?.email ?? "").trim().toLowerCase();
+      const password = String(req.body?.password ?? "");
+      const name = String(req.body?.name ?? "").trim();
+
+      if (!email || !password || !name) {
+        return res.status(400).json({ message: "Preencha nome, e-mail e senha." });
+      }
+      if (password.length < 6) {
+        return res
+          .status(400)
+          .json({ message: "A senha precisa ter pelo menos 6 caracteres." });
+      }
+
+      const data = await supabaseAuth("/signup", {
+        email,
+        password,
+        data: { name },
+      });
+
+      const portfolioUser = data.user ? await syncPortfolioUser(data.user) : null;
+      if (data.access_token && data.refresh_token) {
+        setSessionCookies(req, res, data);
+      }
+
+      return res.json({
+        success: true,
+        user: data.user ?? null,
+        portfolioUser,
+      });
+    } catch (error) {
+      const status = (error as Error & { status?: number })?.status || 500;
+      return res.status(status).json({
+        message:
+          error instanceof Error
+            ? error.message
+            : "Não foi possível criar a conta.",
+      });
+    }
+  });
+
   app.post("/api/auth/refresh", async (req, res) => {
     disableCaching(res);
     const data = await refreshSession(req, res);
-
     if (!data) {
       return res.status(401).json({ message: "Sessão expirada." });
     }
-
     return res.json({ success: true });
   });
 
@@ -246,16 +284,15 @@ export function registerSupabaseAuthRoutes(app: Express) {
         });
       }
     } catch {
-      // Always clear our cookies even if Supabase is temporarily unavailable.
+      // The local server-side session is cleared even if Supabase is unavailable.
     }
 
-    clearPortfolioSessionCookies(req, res);
+    clearSessionCookies(req, res);
     return res.json({ success: true });
   });
 
   app.post("/api/auth/login", async (req, res) => {
     disableCaching(res);
-
     try {
       const email = String(req.body?.email ?? "").trim().toLowerCase();
       const password = String(req.body?.password ?? "");
@@ -272,13 +309,12 @@ export function registerSupabaseAuthRoutes(app: Express) {
 
       if (!portfolioUser) {
         return res.status(401).json({
-          message:
-            "A conta foi autenticada, mas não pôde ser vinculada ao portfólio.",
+          message: "A conta foi autenticada, mas não pôde ser vinculada ao portfólio.",
         });
       }
 
       if (portfolioUser.role !== "admin") {
-        clearPortfolioSessionCookies(req, res);
+        clearSessionCookies(req, res);
         return res.status(403).json({
           message:
             "Esta conta existe no Supabase, mas não possui permissão de administrador. Confira OWNER_EMAIL na Vercel ou role = admin em public.users.",
