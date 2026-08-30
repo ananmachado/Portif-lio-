@@ -10,13 +10,16 @@ type AuthResponse = {
   success?: boolean;
   message?: string;
   portfolioUser?: PortfolioAuthUser | null;
+  user?: {
+    id?: string;
+    email?: string;
+  } | null;
 };
 
 async function apiAuth(path: string, body?: unknown): Promise<AuthResponse> {
   const response = await fetch(`/api/auth${path}`, {
     method: "POST",
-    headers:
-      body === undefined ? undefined : { "Content-Type": "application/json" },
+    headers: body === undefined ? undefined : { "Content-Type": "application/json" },
     credentials: "include",
     body: body === undefined ? undefined : JSON.stringify(body),
   });
@@ -38,11 +41,15 @@ async function apiAuth(path: string, body?: unknown): Promise<AuthResponse> {
 }
 
 /**
- * The browser talks only to our own Vercel API.
- * No Supabase key or Supabase access/refresh token is exposed to client code.
+ * Browser code sends only e-mail/password to our own Vercel API.
+ * Supabase keys and session tokens remain server-side in HTTP-only cookies.
  */
 export function signIn(email: string, password: string) {
   return apiAuth("/login", { email, password });
+}
+
+export function signUp(email: string, password: string, name: string) {
+  return apiAuth("/signup", { email, password, name });
 }
 
 export function signOut() {
