@@ -2,27 +2,22 @@ function clean(value: string | undefined) {
   return value?.trim() ?? "";
 }
 
-const supabasePublishableKey =
-  clean(process.env.SUPABASE_PUBLISHABLE_KEY) ||
-  // Server-only legacy fallback. Never read VITE_* here.
-  clean(process.env.SUPABASE_ANON_KEY);
-
-const supabaseSecretKey =
-  clean(process.env.SUPABASE_SECRET_KEY) ||
-  clean(process.env.SUPABASE_SERVICE_ROLE_KEY);
-
 export const ENV = {
-  // Legacy values kept only for source compatibility with unused preview helpers.
+  // Legacy Manus/OAuth values are server-only. Do not use VITE_* for secrets.
   appId: clean(process.env.APP_ID),
   cookieSecret: clean(process.env.JWT_SECRET),
   databaseUrl: clean(process.env.DATABASE_URL),
 
-  // Supabase is configured exclusively on the server.
-  // No Supabase key is read from import.meta.env / VITE_*.
+  // Supabase is configured exclusively on the server in Vercel.
+  // None of these values are injected into the Vite browser bundle.
   supabaseUrl: clean(process.env.SUPABASE_URL),
-  supabasePublishableKey,
-  supabaseSecretKey,
-  supabaseServiceRoleKey: supabaseSecretKey,
+  supabasePublishableKey: clean(process.env.SUPABASE_PUBLISHABLE_KEY),
+  supabaseSecretKey:
+    clean(process.env.SUPABASE_SECRET_KEY) ||
+    clean(process.env.SUPABASE_SERVICE_ROLE_KEY),
+  supabaseServiceRoleKey:
+    clean(process.env.SUPABASE_SECRET_KEY) ||
+    clean(process.env.SUPABASE_SERVICE_ROLE_KEY),
   supabaseStorageBucket:
     clean(process.env.SUPABASE_STORAGE_BUCKET) || "portfolio-media",
 
@@ -33,53 +28,3 @@ export const ENV = {
   forgeApiUrl: clean(process.env.BUILT_IN_FORGE_API_URL),
   forgeApiKey: clean(process.env.BUILT_IN_FORGE_API_KEY),
 };
-
-export function getSupabaseConfigStatus() {
-  return {
-    urlConfigured: Boolean(ENV.supabaseUrl),
-    publishableKeyConfigured: Boolean(ENV.supabasePublishableKey),
-    publishableKeyLooksValid:
-      Boolean(ENV.supabasePublishableKey) &&
-      !ENV.supabasePublishableKey.startsWith("sb_secret_"),
-    secretKeyConfigured: Boolean(ENV.supabaseSecretKey),
-    secretKeyLooksValid:
-      Boolean(ENV.supabaseSecretKey) &&
-      !ENV.supabaseSecretKey.startsWith("sb_publishable_"),
-    ownerEmailConfigured: Boolean(ENV.ownerEmail),
-    storageBucket: ENV.supabaseStorageBucket,
-  };
-}
-
-export function assertSupabaseAuthConfig() {
-  if (!ENV.supabaseUrl) {
-    throw new Error("SUPABASE_URL não está configurada na Vercel.");
-  }
-
-  if (!ENV.supabasePublishableKey) {
-    throw new Error(
-      "SUPABASE_PUBLISHABLE_KEY não está configurada na Vercel.",
-    );
-  }
-
-  if (ENV.supabasePublishableKey.startsWith("sb_secret_")) {
-    throw new Error(
-      "SUPABASE_PUBLISHABLE_KEY recebeu uma Secret key (sb_secret_...). Use a Publishable key (sb_publishable_...).",
-    );
-  }
-}
-
-export function assertSupabaseServerConfig() {
-  if (!ENV.supabaseUrl) {
-    throw new Error("SUPABASE_URL não está configurada na Vercel.");
-  }
-
-  if (!ENV.supabaseSecretKey) {
-    throw new Error("SUPABASE_SECRET_KEY não está configurada na Vercel.");
-  }
-
-  if (ENV.supabaseSecretKey.startsWith("sb_publishable_")) {
-    throw new Error(
-      "SUPABASE_SECRET_KEY recebeu uma Publishable key. Use a Secret key (sb_secret_...).",
-    );
-  }
-}
