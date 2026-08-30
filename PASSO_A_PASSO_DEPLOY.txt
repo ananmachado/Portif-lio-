@@ -1,0 +1,69 @@
+PORTFÓLIO — DEPLOY LIMPO VERCEL + SUPABASE
+===========================================
+
+1. SUBSTITUA O REPOSITÓRIO PELO CONTEÚDO DESTE ZIP
+
+A raiz deve conter:
+api/
+client/
+drizzle/
+server/
+shared/
+supabase/
+package.json
+pnpm-lock.yaml
+vercel.json
+vite.config.ts
+
+NÃO crie uma pasta src/ na raiz.
+NÃO mova server/auth.ts, server/db.ts ou server/routers.ts para client/src/.
+
+2. VERCEL > SETTINGS > ENVIRONMENT VARIABLES
+
+Deixe estas variáveis:
+SUPABASE_URL
+SUPABASE_PUBLISHABLE_KEY
+SUPABASE_SECRET_KEY
+SUPABASE_STORAGE_BUCKET
+OWNER_EMAIL
+
+SUPABASE_STORAGE_BUCKET deve ser:
+portfolio-media
+
+OWNER_EMAIL deve ser exatamente o e-mail da aluna no Supabase Auth.
+
+APAGUE variáveis antigas do tipo:
+VITE_SUPABASE_*
+VITE_OWNER_USER_ID
+VITE_SUPABASE_ADMIN_EMAIL
+
+3. SUPABASE
+
+Authentication > Users:
+- confirme que a aluna existe;
+- confirme que ela sabe a senha.
+
+SQL Editor:
+- banco novo: rode supabase/schema.sql
+- banco existente: rode supabase/fix_portfolio_api_access.sql
+
+4. REDEPLOY
+
+Depois de ajustar as variáveis, faça novo deploy no Vercel.
+
+5. TESTE PRIMEIRO
+
+Abra:
+https://SEU-SITE.vercel.app/api/health
+
+Precisa retornar ok: true.
+A resposta mostra apenas se as variáveis existem e parecem estar no lugar certo;
+não revela as chaves.
+
+6. TESTE O LOGIN
+
+Abra:
+https://SEU-SITE.vercel.app/admin-login
+
+O navegador envia somente e-mail e senha para a própria API do site.
+As chaves Supabase e os tokens de sessão não ficam no JavaScript do frontend.
