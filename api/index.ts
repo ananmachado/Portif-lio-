@@ -1,14 +1,16 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { app } from "../server/vercelApp";
+import { getSupabaseConfigStatus } from "../server/_core/env";
 
 /**
  * Vercel entry point for the Express API.
  *
- * /api/health is handled directly so configuration diagnostics do not depend
- * on the rest of the Express application being initialized. Other /api/*
- * routes are forwarded to the Express application after restoring the path
- * from the Vercel rewrite query parameter.
+ * The server app is imported statically so Vercel's Node bundler includes the
+ * local server modules in the deployed function. Using a runtime `import()`
+ * here can leave the extensionless `/server/vercelApp` path unresolved in
+ * Node ESM at runtime.
  */
-export default async function handler(req: IncomingMessage, res: ServerResponse) {
+export default function handler(req: IncomingMessage, res: ServerResponse) {
   try {
     const host = req.headers.host || "localhost";
     const incomingUrl = new URL(req.url || "/api/index", `https://${host}`);
@@ -20,14 +22,18 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     const normalizedPath = originalPath
       .split("/")
       .filter(Boolean)
-      .map((segment) => encodeURIComponent(decodeURIComponent(segment)))
+      .map((segment) => {
+        try {
+          return encodeURIComponent(decodeURIComponent(segment));
+        } catch {
+          return encodeURIComponent(segment);
+        }
+      })
       .join("/");
 
     req.url = `/api/${normalizedPath}${query ? `?${query}` : ""}`;
 
-    // Health is intentionally answered without loading the whole application.
     if (normalizedPath === "health") {
-      const { getSupabaseConfigStatus } = await import("../server/_core/env");
       const supabase = getSupabaseConfigStatus();
       const ok =
         supabase.urlConfigured &&
@@ -39,21 +45,11 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
 
       res.statusCode = ok ? 200 : 503;
       res.setHeader("Content-Type", "application/json; charset=utf-8");
-      res.end(
-        JSON.stringify({
-          ok,
-          service: "portfolio-api",
-          supabase,
-        }),
-      );
+      res.end(JSON.stringify({ ok, service: "portfolio-api", supabase }));
       return;
     }
 
-    const { app } = await import("../server/vercelApp");
-    return (app as unknown as (request: IncomingMessage, response: ServerResponse) => unknown)(
-      req,
-      res,
-    );
+    return (app as unknown as (request: unknown, response: unknown) => unknown)(req, res);
   } catch (error) {
     console.error("[Vercel Function]", error);
     res.statusCode = 500;
