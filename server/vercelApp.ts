@@ -1,4 +1,4 @@
-import express, { type Express } from "express";
+import express from "express";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { appRouter } from "./routers";
 import { createContext } from "./_core/context";
@@ -11,7 +11,7 @@ import { getSupabaseConfigStatus } from "./_core/env";
  * It intentionally does not register the legacy Manus/OAuth routes because
  * those routes pull in preview-only modules that are not needed in production.
  */
-export function createVercelApp(): Express {
+export function createVercelApp() {
   const app = express();
 
   app.set("trust proxy", 1);
@@ -75,6 +75,14 @@ export function createVercelApp(): Express {
       ok,
       service: "portfolio-api",
       supabase,
+    });
+  });
+
+  app.use((error: unknown, _req: any, res: any, _next: any) => {
+    console.error("[Express] Unhandled error", error);
+    if (res.headersSent) return;
+    res.status(500).json({
+      error: error instanceof Error ? error.message : "Internal server error",
     });
   });
 
