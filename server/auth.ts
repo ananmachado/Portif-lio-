@@ -1,4 +1,7 @@
-import type { Express, Request, Response } from "express";
+import express from "express";
+type ExpressApp = ReturnType<typeof express>;
+type Request = any;
+type Response = any;
 import { parse as parseCookieHeader } from "cookie";
 import {
   assertSupabaseAuthConfig,
@@ -208,7 +211,7 @@ export async function resolveAuthenticatedPortfolioUser(
 
   if (!authUser) {
     const refreshed = await refreshSession(req, res);
-    accessToken = refreshed?.access_token;
+    accessToken = refreshed?.access_token ?? undefined;
     authUser =
       refreshed?.user ??
       (accessToken ? await fetchSupabaseUser(accessToken) : null);
@@ -218,7 +221,7 @@ export async function resolveAuthenticatedPortfolioUser(
   return syncPortfolioUser(authUser);
 }
 
-export function registerSupabaseAuthRoutes(app: Express) {
+export function registerSupabaseAuthRoutes(app: ExpressApp) {
   app.post("/api/auth/refresh", async (req, res) => {
     disableCaching(res);
     const data = await refreshSession(req, res);
