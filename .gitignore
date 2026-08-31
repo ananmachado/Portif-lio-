@@ -1,0 +1,15 @@
+node_modules/
+dist/
+build/
+.vercel/
+*.tsbuildinfo
+
+# Never commit real environment values/secrets.
+.env
+.env.local
+.env.development
+.env.production
+.env.*.local
+
+# Keep the safe template in Git.
+!.env.example
