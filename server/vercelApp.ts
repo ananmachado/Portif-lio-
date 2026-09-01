@@ -4,7 +4,7 @@ import { appRouter } from "./routers";
 import { createContext } from "./_core/context";
 import { storagePut } from "./storage";
 import { registerSupabaseAuthRoutes } from "./auth";
-import { getSupabaseConfigStatus } from "./_core/env";
+import { getPortfolioHealthStatus } from "./health";
 
 /**
  * Vercel-only Express application.
@@ -61,21 +61,9 @@ export function createVercelApp() {
     }),
   );
 
-  app.get("/api/health", (_req, res) => {
-    const supabase = getSupabaseConfigStatus();
-    const ok =
-      supabase.urlConfigured &&
-      supabase.publishableKeyConfigured &&
-      supabase.publishableKeyLooksValid &&
-      supabase.secretKeyConfigured &&
-      supabase.secretKeyLooksValid &&
-      supabase.ownerEmailConfigured;
-
-    res.status(ok ? 200 : 503).json({
-      ok,
-      service: "portfolio-api",
-      supabase,
-    });
+  app.get("/api/health", async (_req, res) => {
+    const health = await getPortfolioHealthStatus();
+    res.status(health.ok ? 200 : 503).json(health);
   });
 
   app.use((error: unknown, _req: any, res: any, _next: any) => {
