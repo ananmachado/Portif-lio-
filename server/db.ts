@@ -129,26 +129,116 @@ async function deleteWhere(table: string, filters: Filter[]): Promise<void> {
   await supabaseRequest(table, { method: "DELETE", filters });
 }
 
+
+export type PortfolioDatabaseProbe = {
+  ok: boolean;
+  status: number | null;
+  message: string;
+};
+
+/**
+ * Safe production diagnostic used by /api/health. It verifies that the Vercel
+ * function can actually reach the portfolio tables with the configured server
+ * key, without returning rows or secrets to the browser.
+ */
+export async function probePortfolioDatabase(): Promise<PortfolioDatabaseProbe> {
+  try {
+    const { baseUrl, serverKey } = getSupabaseConfig();
+    const url = new URL(`${baseUrl}/rest/v1/users`);
+    url.searchParams.set("select", "id");
+    url.searchParams.set("limit", "1");
+
+    const response = await fetch(url, {
+      headers: {
+        apikey: serverKey,
+        Accept: "application/json",
+      },
+    });
+
+    if (response.ok) {
+      return {
+        ok: true,
+        status: response.status,
+        message: "Data API e public.users acessíveis pelo servidor.",
+      };
+    }
+
+    const status = response.status;
+    const message =
+      status === 401
+        ? "SUPABASE_SECRET_KEY/SERVICE_ROLE inválida para este projeto."
+        : status === 403
+          ? "A chave de servidor não tem acesso à Data API/public.users. Rode o SQL de permissões."
+          : status === 404
+            ? "public.users não foi encontrada/exposta na Data API. Rode supabase/schema.sql."
+            : `Data API respondeu HTTP ${status}.`;
+
+    return { ok: false, status, message };
+  } catch (error) {
+    return {
+      ok: false,
+      status: null,
+      message: error instanceof Error ? error.message : "Falha ao verificar a Data API.",
+    };
+  }
+}
+
 // ─── Users ────────────────────────────────────────────────────────────────────
 export async function upsertUser(user: InsertUser): Promise<void> {
   if (!user.openId) throw new Error("User openId is required for upsert");
 
-  const values: Record<string, unknown> = {
-    openId: user.openId,
+  const requestedRole =
+    user.role !== undefined
+      ? user.role
+      : user.openId === ENV.ownerOpenId
+        ? "admin"
+        : undefined;
+
+  // IMPORTANT: do not use a PostgREST UPSERT here. During an upsert, omitted
+  // columns can be filled from database defaults on the INSERT side of the
+  // operation. For the `role` column that default is `user`, which makes an
+  // authentication sync a dangerous place to merge authorization data.
+  //
+  // Instead, update an existing row using only the fields we explicitly want
+  // to change. This guarantees that an existing `role = admin` survives login.
+  const existing = await getUserByOpenId(user.openId);
+  const mutableValues: Record<string, unknown> = {
     ...(user.name !== undefined ? { name: user.name ?? null } : {}),
     ...(user.email !== undefined ? { email: user.email ?? null } : {}),
     ...(user.loginMethod !== undefined ? { loginMethod: user.loginMethod ?? null } : {}),
-    ...(user.lastSignedIn !== undefined ? { lastSignedIn: user.lastSignedIn } : { lastSignedIn: new Date() }),
+    ...(user.lastSignedIn !== undefined
+      ? { lastSignedIn: user.lastSignedIn }
+      : { lastSignedIn: new Date() }),
+    ...(requestedRole !== undefined ? { role: requestedRole } : {}),
   };
 
-  if (user.role !== undefined) values.role = user.role;
-  else if (user.openId === ENV.ownerOpenId) values.role = "admin";
+  if (existing) {
+    await updateWhere<User>(
+      "users",
+      [["openId", "eq", user.openId]],
+      mutableValues,
+    );
+    return;
+  }
 
-  await supabaseRequest<User[]>("users", {
-    method: "POST",
-    body: values,
-    upsertOn: "openId",
-  });
+  try {
+    await insertOne<User>("users", {
+      openId: user.openId,
+      ...mutableValues,
+      role: requestedRole ?? "user",
+    });
+  } catch (error) {
+    // If two requests create the same user concurrently, preserve the row that
+    // won the race and update it without touching its role unnecessarily.
+    const raced = await getUserByOpenId(user.openId);
+    if (!raced) throw error;
+
+    await updateWhere<User>(
+      "users",
+      [["openId", "eq", user.openId]],
+      mutableValues,
+    );
+  }
 }
 
 export async function getUserByOpenId(openId: string) {
