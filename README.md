@@ -41,7 +41,7 @@ Valor recomendado do bucket:
 SUPABASE_STORAGE_BUCKET=portfolio-media
 ```
 
-`OWNER_EMAIL` deve ser exatamente o e-mail usado pela aluna em **Supabase → Authentication → Users**.
+`OWNER_EMAIL` deve ser exatamente o e-mail usado pela aluna em **Supabase → Authentication → Users**. A versão corrigida também aceita `ADMIN_EMAIL` como fallback server-side para não quebrar projetos Vercel antigos, mas `OWNER_EMAIL` continua sendo o nome recomendado.
 
 Nunca coloque a `sb_secret_...` em uma variável do frontend ou no GitHub.
 
@@ -59,7 +59,7 @@ Abra:
 https://SEU-SITE.vercel.app/api/health
 ```
 
-Quando a configuração estiver completa, a resposta deve ter `ok: true` e os quatro campos de configuração como `true`. Nenhum valor de chave é retornado.
+Quando a configuração estiver completa, a resposta deve ter `ok: true`. Além das variáveis, o endpoint testa se a função da Vercel consegue realmente ler `public.users` usando a chave de servidor. Nenhum valor de chave nem dado de usuário é retornado.
 
 Depois teste:
 
