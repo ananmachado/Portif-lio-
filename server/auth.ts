@@ -282,9 +282,24 @@ export function registerSupabaseAuthRoutes(app: ExpressApp) {
 
       if (portfolioUser.role !== "admin") {
         clearPortfolioSessionCookies(req, res);
+
+        if (!ENV.ownerEmail) {
+          return res.status(503).json({
+            message:
+              "Login válido no Supabase, mas o e-mail da administradora não está configurado na Vercel. Defina OWNER_EMAIL (ou ADMIN_EMAIL) com o mesmo e-mail de Authentication > Users e faça um novo deploy.",
+          });
+        }
+
+        if (email !== ENV.ownerEmail) {
+          return res.status(403).json({
+            message:
+              "Login válido no Supabase, mas este e-mail não é o e-mail administrador configurado na Vercel. Confira OWNER_EMAIL/ADMIN_EMAIL.",
+          });
+        }
+
         return res.status(403).json({
           message:
-            "Esta conta existe no Supabase, mas não possui permissão de administrador. Confira OWNER_EMAIL na Vercel ou role = admin em public.users.",
+            "Login válido, porém a conta não ficou com role admin em public.users. Confira as permissões da Data API e rode o SQL de correção do projeto.",
         });
       }
 
@@ -300,11 +315,48 @@ export function registerSupabaseAuthRoutes(app: ExpressApp) {
         portfolioUser,
       });
     } catch (error) {
-      const status = (error as Error & { status?: number })?.status || 500;
-      return res.status(status).json({
-        message:
-          error instanceof Error ? error.message : "Não foi possível entrar.",
-      });
+      const rawMessage =
+        error instanceof Error ? error.message : "Não foi possível entrar.";
+      const explicitStatus = (error as Error & { status?: number })?.status;
+
+      // Errors returned by Supabase Auth keep their original status/message.
+      if (explicitStatus) {
+        return res.status(explicitStatus).json({ message: rawMessage });
+      }
+
+      const lower = rawMessage.toLowerCase();
+      if (lower.includes("supabase_secret_key não está configurada")) {
+        return res.status(503).json({
+          message:
+            "O login chegou ao servidor, mas SUPABASE_SECRET_KEY não está configurada na Vercel.",
+        });
+      }
+      if (lower.includes("users failed (401)")) {
+        return res.status(503).json({
+          message:
+            "O Supabase autenticou a conta, mas a Secret/Service Role key configurada na Vercel é inválida para este projeto.",
+        });
+      }
+      if (lower.includes("users failed (403)")) {
+        return res.status(503).json({
+          message:
+            "O Supabase autenticou a conta, mas a chave de servidor não consegue acessar public.users. Rode supabase/fix_portfolio_api_access.sql no SQL Editor do projeto da aluna.",
+        });
+      }
+      if (lower.includes("users failed (404)") || lower.includes("pgrst205")) {
+        return res.status(503).json({
+          message:
+            "O Supabase autenticou a conta, mas public.users não foi encontrada pela Data API. Rode supabase/schema.sql no SQL Editor do projeto da aluna.",
+        });
+      }
+      if (lower === "fetch failed" || lower.includes("enotfound") || lower.includes("econnrefused")) {
+        return res.status(503).json({
+          message:
+            "A função da Vercel não conseguiu alcançar o Supabase. Confira SUPABASE_URL e o status do projeto da aluna.",
+        });
+      }
+
+      return res.status(500).json({ message: rawMessage });
     }
   });
 }
