@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { app } from "../server/vercelApp";
-import { getSupabaseConfigStatus } from "../server/_core/env";
+import { getPortfolioHealthStatus } from "../server/health";
 
 /**
  * Vercel entry point for the Express API.
@@ -10,7 +10,7 @@ import { getSupabaseConfigStatus } from "../server/_core/env";
  * here can leave the extensionless `/server/vercelApp` path unresolved in
  * Node ESM at runtime.
  */
-export default function handler(req: IncomingMessage, res: ServerResponse) {
+export default async function handler(req: IncomingMessage, res: ServerResponse) {
   try {
     const host = req.headers.host || "localhost";
     const incomingUrl = new URL(req.url || "/api/index", `https://${host}`);
@@ -34,18 +34,10 @@ export default function handler(req: IncomingMessage, res: ServerResponse) {
     req.url = `/api/${normalizedPath}${query ? `?${query}` : ""}`;
 
     if (normalizedPath === "health") {
-      const supabase = getSupabaseConfigStatus();
-      const ok =
-        supabase.urlConfigured &&
-        supabase.publishableKeyConfigured &&
-        supabase.publishableKeyLooksValid &&
-        supabase.secretKeyConfigured &&
-        supabase.secretKeyLooksValid &&
-        supabase.ownerEmailConfigured;
-
-      res.statusCode = ok ? 200 : 503;
+      const health = await getPortfolioHealthStatus();
+      res.statusCode = health.ok ? 200 : 503;
       res.setHeader("Content-Type", "application/json; charset=utf-8");
-      res.end(JSON.stringify({ ok, service: "portfolio-api", supabase }));
+      res.end(JSON.stringify(health));
       return;
     }
 
