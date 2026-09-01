@@ -11,6 +11,13 @@ const supabaseSecretKey =
   clean(process.env.SUPABASE_SECRET_KEY) ||
   clean(process.env.SUPABASE_SERVICE_ROLE_KEY);
 
+// Keep the owner/admin e-mail server-only. OWNER_EMAIL is the preferred name,
+// but ADMIN_EMAIL remains supported so older Vercel projects do not suddenly
+// lose administrative access after a code update.
+const ownerEmail =
+  clean(process.env.OWNER_EMAIL) ||
+  clean(process.env.ADMIN_EMAIL);
+
 export const ENV = {
   // Legacy values kept only for source compatibility with unused preview helpers.
   appId: clean(process.env.APP_ID),
@@ -28,7 +35,7 @@ export const ENV = {
 
   oAuthServerUrl: clean(process.env.OAUTH_SERVER_URL),
   ownerOpenId: clean(process.env.OWNER_OPEN_ID),
-  ownerEmail: clean(process.env.OWNER_EMAIL).toLowerCase(),
+  ownerEmail: ownerEmail.toLowerCase(),
   isProduction: process.env.NODE_ENV === "production",
   forgeApiUrl: clean(process.env.BUILT_IN_FORGE_API_URL),
   forgeApiKey: clean(process.env.BUILT_IN_FORGE_API_KEY),
@@ -46,6 +53,11 @@ export function getSupabaseConfigStatus() {
       Boolean(ENV.supabaseSecretKey) &&
       !ENV.supabaseSecretKey.startsWith("sb_publishable_"),
     ownerEmailConfigured: Boolean(ENV.ownerEmail),
+    ownerEmailSource: clean(process.env.OWNER_EMAIL)
+      ? "OWNER_EMAIL"
+      : clean(process.env.ADMIN_EMAIL)
+        ? "ADMIN_EMAIL"
+        : null,
     storageBucket: ENV.supabaseStorageBucket,
   };
 }
