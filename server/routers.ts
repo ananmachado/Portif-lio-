@@ -1,8 +1,8 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { systemRouter } from "./_core/systemRouter";
-import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
-import { storagePut } from "./storage";
+import { systemRouter } from "./_core/systemRouter.js";
+import { protectedProcedure, publicProcedure, router } from "./_core/trpc.js";
+import { storagePut } from "./storage.js";
 import {
   getOrCreateSettings,
   updateSettings,
@@ -31,10 +31,10 @@ import {
   getPortfolioOwnerUser,
   listUsersForAdmin,
   setUserRole,
-} from "./db";
+} from "./db.js";
 import type { ThemeConfig } from "../drizzle/schema";
-import { ENV } from "./_core/env";
-import { roleChangeDenialReason } from "./authorization";
+import { ENV } from "./_core/env.js";
+import { roleChangeDenialReason } from "./authorization.js";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function slugify(text: string): string {
