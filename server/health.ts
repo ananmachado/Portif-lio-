@@ -1,5 +1,5 @@
-import { getSupabaseConfigStatus } from "./_core/env";
-import { probePortfolioDatabase } from "./db";
+import { getSupabaseConfigStatus } from "./_core/env.js";
+import { probePortfolioDatabase } from "./db.js";
 
 export async function getPortfolioHealthStatus() {
   const supabase = getSupabaseConfigStatus();
