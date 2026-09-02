@@ -6,8 +6,8 @@ import { parse as parseCookieHeader } from "cookie";
 import {
   assertSupabaseAuthConfig,
   ENV,
-} from "./_core/env";
-import { getUserByOpenId, upsertUser } from "./db";
+} from "./_core/env.js";
+import { getUserByOpenId, upsertUser } from "./db.js";
 import type { User } from "../drizzle/schema";
 
 const ACCESS_COOKIE = "portfolio-sb-access";
