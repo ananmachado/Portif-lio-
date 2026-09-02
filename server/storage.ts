@@ -1,4 +1,4 @@
-import { assertSupabaseServerConfig, ENV } from "./_core/env";
+import { assertSupabaseServerConfig, ENV } from "./_core/env.js";
 
 function getStorageConfig() {
   assertSupabaseServerConfig();
