@@ -1,10 +1,10 @@
 import express from "express";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
-import { appRouter } from "./routers";
-import { createContext } from "./_core/context";
-import { storagePut } from "./storage";
-import { registerSupabaseAuthRoutes } from "./auth";
-import { getPortfolioHealthStatus } from "./health";
+import { appRouter } from "./routers.js";
+import { createContext } from "./_core/context.js";
+import { storagePut } from "./storage.js";
+import { registerSupabaseAuthRoutes } from "./auth.js";
+import { getPortfolioHealthStatus } from "./health.js";
 
 /**
  * Vercel-only Express application.
