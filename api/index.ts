@@ -1,14 +1,21 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { app } from "../server/vercelApp";
-import { getPortfolioHealthStatus } from "../server/health";
+import { handleDirectAuthRequest } from "../server/authApi.ts";
+import { getPortfolioHealthStatus } from "../server/health.ts";
+
+function sendJson(res: ServerResponse, status: number, body: unknown) {
+  if (res.headersSent) return;
+  res.statusCode = status;
+  res.setHeader("Content-Type", "application/json; charset=utf-8");
+  res.setHeader("Cache-Control", "no-store");
+  res.end(JSON.stringify(body));
+}
 
 /**
- * Vercel entry point for the Express API.
+ * Vercel entry point.
  *
- * The server app is imported statically so Vercel's Node bundler includes the
- * local server modules in the deployed function. Using a runtime `import()`
- * here can leave the extensionless `/server/vercelApp` path unresolved in
- * Node ESM at runtime.
+ * IMPORTANT: Auth and health are handled before the Express/tRPC application is
+ * imported. This prevents an unrelated startup error in the admin API bundle
+ * from crashing /api/auth/login with Vercel's generic FUNCTION_INVOCATION_FAILED.
  */
 export default async function handler(req: IncomingMessage, res: ServerResponse) {
   try {
@@ -31,26 +38,28 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
       })
       .join("/");
 
-    req.url = `/api/${normalizedPath}${query ? `?${query}` : ""}`;
-
     if (normalizedPath === "health") {
       const health = await getPortfolioHealthStatus();
-      res.statusCode = health.ok ? 200 : 503;
-      res.setHeader("Content-Type", "application/json; charset=utf-8");
-      res.end(JSON.stringify(health));
+      sendJson(res, health.ok ? 200 : 503, health);
       return;
     }
 
-    return (app as unknown as (request: unknown, response: unknown) => unknown)(req, res);
+    if (await handleDirectAuthRequest(normalizedPath, req, res)) {
+      return;
+    }
+
+    req.url = `/api/${normalizedPath}${query ? `?${query}` : ""}`;
+
+    // Load the heavier Express/tRPC application only when it is actually needed.
+    // Using a literal TypeScript extension makes the dependency explicit to the
+    // Vercel bundler and keeps import failures inside this try/catch.
+    const { app } = await import("../server/vercelApp.ts");
+    (app as unknown as (request: unknown, response: unknown) => void)(req, res);
   } catch (error) {
-    console.error("[Vercel Function]", error);
-    res.statusCode = 500;
-    res.setHeader("Content-Type", "application/json; charset=utf-8");
-    res.end(
-      JSON.stringify({
-        error: "FUNCTION_INVOCATION_FAILED",
-        message: error instanceof Error ? error.message : "Internal server error",
-      }),
-    );
+    console.error("[Vercel API]", error);
+    sendJson(res, 500, {
+      error: "PORTFOLIO_API_STARTUP_FAILED",
+      message: error instanceof Error ? error.message : "Internal server error",
+    });
   }
 }
