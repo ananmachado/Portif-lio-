@@ -1,6 +1,6 @@
 import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
 import type { User } from "../../drizzle/schema";
-import { resolveAuthenticatedPortfolioUser } from "../auth";
+import { resolveAuthenticatedPortfolioUser } from "../auth.js";
 
 export type TrpcContext = {
   req: CreateExpressContextOptions["req"];
