@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { handleDirectAuthRequest } from "../server/authApi";
-import { getPortfolioHealthStatus } from "../server/health";
+import { handleDirectAuthRequest } from "../server/authApi.js";
+import { getPortfolioHealthStatus } from "../server/health.js";
 
 function sendJson(res: ServerResponse, status: number, body: unknown) {
   if (res.headersSent) return;
@@ -51,7 +51,7 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     req.url = `/api/${normalizedPath}${query ? `?${query}` : ""}`;
 
     // Load the heavier Express/tRPC application only when it is actually needed.
-    const { app } = await import("../server/vercelApp");
+    const { app } = await import("../server/vercelApp.js");
     (app as unknown as (request: unknown, response: unknown) => void)(req, res);
   } catch (error) {
     console.error("[Vercel API]", error);
