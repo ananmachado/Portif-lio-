@@ -1,7 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { parse as parseCookieHeader, serialize as serializeCookie } from "cookie";
-import { ENV, assertSupabaseAuthConfig } from "./_core/env";
-import { getUserByOpenId, upsertUser } from "./db";
+import { ENV, assertSupabaseAuthConfig } from "./_core/env.js";
+import { getUserByOpenId, upsertUser } from "./db.js";
 import type { User } from "../drizzle/schema";
 
 const ACCESS_COOKIE = "portfolio-sb-access";
