@@ -1,13 +1,14 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { systemRouter } from "./_core/systemRouter.js";
-import { protectedProcedure, publicProcedure, router } from "./_core/trpc.js";
-import { storagePut } from "./storage.js";
+import { systemRouter } from "./_core/systemRouter";
+import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
+import { storagePut } from "./storage";
 import {
   getOrCreateSettings,
   updateSettings,
   getPublicSettings,
   getCategoriesByUser,
+  getCategoryById,
   createCategory,
   updateCategory,
   deleteCategory,
@@ -31,10 +32,10 @@ import {
   getPortfolioOwnerUser,
   listUsersForAdmin,
   setUserRole,
-} from "./db.js";
+} from "./db";
 import type { ThemeConfig } from "../drizzle/schema";
-import { ENV } from "./_core/env.js";
-import { roleChangeDenialReason } from "./authorization.js";
+import { ENV } from "./_core/env";
+import { roleChangeDenialReason } from "./authorization";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function slugify(text: string): string {
@@ -141,15 +142,59 @@ export const appRouter = router({
       .query(({ input }) => getCategoriesByUser(input.userId)),
 
     create: adminProcedure
-      .input(z.object({ name: z.string().min(1).max(255), description: z.string().optional() }))
-      .mutation(({ ctx, input }) =>
-        createCategory({ userId: ctx.user.id, name: input.name, slug: slugify(input.name), description: input.description ?? "" })
-      ),
+      .input(z.object({
+        name: z.string().min(1).max(255),
+        description: z.string().optional(),
+        parentCategoryId: z.number().nullable().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (input.parentCategoryId != null) {
+          const parent = await getCategoryById(input.parentCategoryId, ctx.user.id);
+          if (!parent) throw new TRPCError({ code: "BAD_REQUEST", message: "Categoria-pai inválida." });
+          if (parent.parentCategoryId != null) {
+            throw new TRPCError({ code: "BAD_REQUEST", message: "As subcategorias só podem ter uma categoria-pai. Não é possível criar um terceiro nível." });
+          }
+        }
+        return createCategory({
+          userId: ctx.user.id,
+          name: input.name,
+          slug: slugify(input.name),
+          description: input.description ?? "",
+          parentCategoryId: input.parentCategoryId ?? null,
+        });
+      }),
 
     update: adminProcedure
-      .input(z.object({ id: z.number(), name: z.string().min(1).max(255).optional(), description: z.string().optional(), displayOrder: z.number().optional() }))
-      .mutation(({ ctx, input }) => {
+      .input(z.object({
+        id: z.number(),
+        name: z.string().min(1).max(255).optional(),
+        description: z.string().optional(),
+        displayOrder: z.number().optional(),
+        parentCategoryId: z.number().nullable().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
         const { id, ...data } = input;
+        const current = await getCategoryById(id, ctx.user.id);
+        if (!current) throw new TRPCError({ code: "NOT_FOUND", message: "Categoria não encontrada." });
+
+        if (data.parentCategoryId != null) {
+          if (data.parentCategoryId === id) {
+            throw new TRPCError({ code: "BAD_REQUEST", message: "Uma categoria não pode ser filha dela mesma." });
+          }
+          const parent = await getCategoryById(data.parentCategoryId, ctx.user.id);
+          if (!parent) throw new TRPCError({ code: "BAD_REQUEST", message: "Categoria-pai inválida." });
+          if (parent.parentCategoryId != null) {
+            throw new TRPCError({ code: "BAD_REQUEST", message: "As subcategorias só podem ter uma categoria-pai. Não é possível criar um terceiro nível." });
+          }
+          if (current.parentCategoryId == null) {
+            // Ao transformar uma categoria-pai em subcategoria, seus filhos seriam
+            // promovidos para o nível superior para evitar uma hierarquia de 3 níveis.
+            const children = await getCategoriesByUser(ctx.user.id);
+            const childIds = children.filter((c) => c.parentCategoryId === id).map((c) => c.id);
+            await Promise.all(childIds.map((childId) => updateCategory(childId, ctx.user.id, { parentCategoryId: null })));
+          }
+        }
+
         const update: Record<string, unknown> = { ...data };
         if (data.name) update.slug = slugify(data.name);
         return updateCategory(id, ctx.user.id, update);
