@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Menu, X } from "lucide-react";
+import { Menu, X, Moon, Sun } from "lucide-react";
 import { usePortfolio } from "@/contexts/PortfolioContext";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { useTheme } from "@/contexts/ThemeContext";
 
 const navLinks = [
   { href: "/", label: "Início" },
@@ -14,6 +15,7 @@ const navLinks = [
 export default function PublicLayout({ children }: { children: React.ReactNode }) {
   const { settings } = usePortfolio();
   const { user } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const [menuOpen, setMenuOpen] = useState(false);
   const [location] = useLocation();
   const menuRef = useRef<HTMLDivElement>(null);
@@ -55,7 +57,17 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
             ))}
           </nav>
 
-          <div className="header-actions" aria-label="Acesso administrativo">
+          <div className="header-actions" aria-label="Ações do cabeçalho">
+            <button
+              type="button"
+              className="theme-toggle"
+              onClick={toggleTheme}
+              aria-label={theme === "light" ? "Ativar modo noturno" : "Ativar modo claro"}
+              title={theme === "light" ? "Ativar modo noturno" : "Ativar modo claro"}
+            >
+              {theme === "light" ? <Moon size={18} aria-hidden="true" /> : <Sun size={18} aria-hidden="true" />}
+              <span className="sr-only">{theme === "light" ? "Modo noturno" : "Modo claro"}</span>
+            </button>
             <Link href={adminHref} className="header-action header-action--admin">{adminLabel}</Link>
           </div>
 
@@ -77,6 +89,15 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
               {navLinks.map(({ href, label }) => (
                 <Link key={href} href={href} aria-current={location === href ? "page" : undefined} onClick={() => setMenuOpen(false)}>{label}</Link>
               ))}
+              <button
+                type="button"
+                className="mobile-theme-toggle"
+                onClick={() => { toggleTheme(); setMenuOpen(false); }}
+                aria-label={theme === "light" ? "Ativar modo noturno" : "Ativar modo claro"}
+              >
+                {theme === "light" ? <Moon size={18} aria-hidden="true" /> : <Sun size={18} aria-hidden="true" />}
+                <span>{theme === "light" ? "Modo noturno" : "Modo claro"}</span>
+              </button>
               <Link href={adminHref} onClick={() => setMenuOpen(false)}>{adminLabel}</Link>
             </nav>
           </div>
