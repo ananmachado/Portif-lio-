@@ -118,10 +118,22 @@ export default function AdminProjectEditor() {
             </div>
             <div>
               <Label htmlFor="proj-category">Categoria</Label>
-              <Select value={form.categoryId} onValueChange={(v) => setForm((f) => ({ ...f, categoryId: v }))}>
+              <Select value={form.categoryId || "none"} onValueChange={(v) => setForm((f) => ({ ...f, categoryId: v === "none" ? "" : v }))}>
                 <SelectTrigger id="proj-category" className="mt-1"><SelectValue placeholder="Sem categoria" /></SelectTrigger>
                 <SelectContent>
-                  {categories?.map((c) => <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>)}
+                  <SelectItem value="none">Sem categoria</SelectItem>
+                  {(categories ?? [])
+                    .filter((c) => c.parentCategoryId == null)
+                    .sort((a, b) => a.displayOrder - b.displayOrder)
+                    .flatMap((parent) => [
+                      <SelectItem key={parent.id} value={String(parent.id)}>{parent.name}</SelectItem>,
+                      ...(categories ?? [])
+                        .filter((child) => child.parentCategoryId === parent.id)
+                        .sort((a, b) => a.displayOrder - b.displayOrder)
+                        .map((child) => (
+                          <SelectItem key={child.id} value={String(child.id)}>↳ {child.name}</SelectItem>
+                        )),
+                    ])}
                 </SelectContent>
               </Select>
             </div>
