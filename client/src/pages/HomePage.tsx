@@ -60,13 +60,15 @@ export default function HomePage() {
             <ul className="project-shelf" aria-label="Projetos em destaque">
               {displayedProjects.map((project) => {
                 const category = categories?.find((item) => item.id === project.categoryId);
+                const parentCategory = category?.parentCategoryId ? categories?.find((item) => item.id === category.parentCategoryId) : undefined;
+                const categoryLabel = parentCategory ? `${parentCategory.name} · ${category.name}` : (category?.name || "Projeto autoral");
                 return (
                   <li key={project.id}>
                     <article className="project-shelf-card">
                       <Link href={`/projetos/${project.slug}`} className="project-thumb" aria-label={`${ctaLabel}: ${project.title}`}>
                         {project.coverImageUrl ? <img src={project.coverImageUrl} alt={project.coverImageAlt ?? project.title} loading="lazy" /> : <span className="project-thumb--empty">{project.title.slice(0, 1).toUpperCase()}</span>}
                       </Link>
-                      <p className="project-shelf-card__meta">{category?.name || "Projeto autoral"}{project.year ? ` · ${project.year}` : ""}</p>
+                      <p className="project-shelf-card__meta">{categoryLabel}{project.year ? ` · ${project.year}` : ""}</p>
                       <h3>{project.title}</h3>
                       {project.shortDescription && <p className="project-shelf-card__description">{project.shortDescription}</p>}
                       <Link href={`/projetos/${project.slug}`} className="project-shelf-card__link">{ctaLabel}</Link>
