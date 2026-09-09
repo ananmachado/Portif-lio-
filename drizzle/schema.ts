@@ -108,6 +108,7 @@ export interface Project {
   id: number;
   userId: number;
   categoryId: number | null;
+  subcategory: string | null;
   title: string;
   slug: string;
   shortDescription: string | null;
