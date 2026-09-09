@@ -92,6 +92,7 @@ export interface Category {
   id: number;
   userId: number;
   name: string;
+  parentCategoryId: number | null;
   slug: string;
   description: string | null;
   displayOrder: number;
