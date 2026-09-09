@@ -26,7 +26,7 @@ function Router() {
       {/* Administrative access */}
       <Route path="/admin-login" component={AdminLoginPage} />
       <Route path="/admin" component={AdminPage} />
-      <Route path="/admin/:rest*" component={AdminPage} />
+      <Route path="/admin/*" component={AdminPage} />
 
       {/* 404 */}
       <Route path="/404" component={NotFound} />
@@ -38,7 +38,7 @@ function Router() {
 function App() {
   return (
     <ErrorBoundary>
-      <ThemeProvider defaultTheme="system" switchable>
+      <ThemeProvider defaultTheme="light">
         <TooltipProvider>
           <PortfolioProvider>
             <Toaster />
