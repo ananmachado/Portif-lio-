@@ -15,6 +15,8 @@ export default function ProjectDetailPage() {
   const { data: categories } = trpc.categories.listPublic.useQuery({ userId: ownerId }, { enabled: ownerId > 0 });
   const { data: blocks, isLoading: blocksLoading } = trpc.blocks.listPublic.useQuery({ projectId: project?.id ?? 0 }, { enabled: Boolean(project?.id) });
   const category = categories?.find((item) => item.id === project?.categoryId);
+  const parentCategory = category?.parentCategoryId ? categories?.find((item) => item.id === category.parentCategoryId) : undefined;
+  const categoryLabel = parentCategory ? `${parentCategory.name} · ${category?.name}` : (category?.name || "Projeto autoral");
 
   useSEO({ title: project?.title, description: project?.metaDescription ?? project?.shortDescription ?? undefined, ogImage: project?.coverImageUrl ?? undefined, siteName: settings?.portfolioName });
 
@@ -38,7 +40,7 @@ export default function ProjectDetailPage() {
 
           <div className="project-story__hero">
             <header>
-              <p className="site-eyebrow">{category?.name || "Projeto autoral"}</p>
+              <p className="site-eyebrow">{categoryLabel}</p>
               <h1>{project.title}</h1>
               {project.shortDescription && <p className="project-story__description">{project.shortDescription}</p>}
               {project.year && <p className="project-story__year">Ano · {project.year}</p>}
