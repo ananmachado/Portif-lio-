@@ -16,7 +16,7 @@ export default function AdminProjects() {
   const utils = trpc.useUtils();
   const { data: projects, isLoading } = trpc.projects.list.useQuery();
   const { data: categories } = trpc.categories.list.useQuery();
-  const createMutation = trpc.projects.create.useMutation({ onSuccess: (p) => { toast.success("Projeto criado!"); utils.projects.list.invalidate(); setCreateOpen(false); window.location.href = `/admin/projetos/${p.id}`; }, onError: (e) => toast.error(e.message) });
+  const createMutation = trpc.projects.create.useMutation({ onSuccess: (p) => { toast.success("Projeto criado!"); utils.projects.list.invalidate(); setCreateOpen(false); setNewTitle(""); setNewCategoryId(""); setNewSubcategory(""); window.location.href = `/admin/projetos/${p.id}`; }, onError: (e) => toast.error(e.message) });
   const updateMutation = trpc.projects.update.useMutation({ onSuccess: () => { utils.projects.list.invalidate(); }, onError: (e) => toast.error(e.message) });
   const deleteMutation = trpc.projects.delete.useMutation({ onSuccess: () => { toast.success("Projeto excluído!"); utils.projects.list.invalidate(); setDeleteTarget(null); }, onError: (e) => toast.error(e.message) });
   const reorderMutation = trpc.projects.reorder.useMutation({ onSuccess: () => utils.projects.list.invalidate() });
@@ -24,6 +24,7 @@ export default function AdminProjects() {
   const [createOpen, setCreateOpen] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newCategoryId, setNewCategoryId] = useState<string>("");
+  const [newSubcategory, setNewSubcategory] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; title: string } | null>(null);
 
   function moveUp(idx: number) {
@@ -73,6 +74,7 @@ export default function AdminProjects() {
                         {project.status === "published" ? "Publicado" : "Rascunho"}
                       </Badge>
                       {cat && <span className="text-xs" style={{ color: "var(--color-text-secondary)" }}>{cat.name}</span>}
+                      {project.subcategory && <span className="text-xs" style={{ color: "var(--color-text-secondary)" }}>↳ {project.subcategory}</span>}
                       {project.year && <span className="text-xs" style={{ color: "var(--color-text-secondary)" }}>{project.year}</span>}
                     </div>
                   </div>
@@ -110,10 +112,15 @@ export default function AdminProjects() {
                 </SelectContent>
               </Select>
             </div>
+            <div>
+              <Label htmlFor="new-proj-subcategory">Subtópico (opcional)</Label>
+              <Input id="new-proj-subcategory" value={newSubcategory} onChange={(e) => setNewSubcategory(e.target.value)} className="mt-1" placeholder="Ex.: Animações" maxLength={255} />
+              <p className="mt-1 text-xs" style={{ color: "var(--color-text-secondary)" }}>Ex.: Animações, Curtametragens, Cenários.</p>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancelar</Button>
-            <Button onClick={() => newTitle.trim() && createMutation.mutate({ title: newTitle.trim(), categoryId: newCategoryId ? Number(newCategoryId) : null })} disabled={createMutation.isPending || !newTitle.trim()} style={{ background: "var(--color-primary)", color: "oklch(0.98 0 0)" }}>
+            <Button onClick={() => newTitle.trim() && createMutation.mutate({ title: newTitle.trim(), categoryId: newCategoryId ? Number(newCategoryId) : null, subcategory: newSubcategory.trim() })} disabled={createMutation.isPending || !newTitle.trim()} style={{ background: "var(--color-primary)", color: "oklch(0.98 0 0)" }}>
               {createMutation.isPending ? <Loader2 className="animate-spin" size={16} /> : "Criar e editar"}
             </Button>
           </DialogFooter>
