@@ -32,13 +32,13 @@ export default function AdminProjectEditor() {
   const deleteBlockMutation = trpc.blocks.delete.useMutation({ onSuccess: () => { toast.success("Bloco removido!"); utils.blocks.list.invalidate({ projectId }); setDeleteBlockId(null); }, onError: (e) => toast.error(e.message) });
   const reorderMutation = trpc.blocks.reorder.useMutation({ onSuccess: () => utils.blocks.list.invalidate({ projectId }) });
 
-  const [form, setForm] = useState({ title: "", shortDescription: "", year: "", categoryId: "", status: "draft" as "draft" | "published", coverImageUrl: "", coverImageKey: "", coverImageAlt: "", metaDescription: "" });
+  const [form, setForm] = useState({ title: "", shortDescription: "", year: "", categoryId: "", subcategory: "", status: "draft" as "draft" | "published", coverImageUrl: "", coverImageKey: "", coverImageAlt: "", metaDescription: "" });
   const [deleteBlockId, setDeleteBlockId] = useState<number | null>(null);
   const [editingBlock, setEditingBlock] = useState<Record<number, Partial<ProjectBlock>>>({});
 
   useEffect(() => {
     if (project) {
-      setForm({ title: project.title, shortDescription: project.shortDescription ?? "", year: project.year ?? "", categoryId: project.categoryId ? String(project.categoryId) : "", status: project.status, coverImageUrl: project.coverImageUrl ?? "", coverImageKey: project.coverImageKey ?? "", coverImageAlt: project.coverImageAlt ?? "", metaDescription: project.metaDescription ?? "" });
+      setForm({ title: project.title, shortDescription: project.shortDescription ?? "", year: project.year ?? "", categoryId: project.categoryId ? String(project.categoryId) : "", subcategory: project.subcategory ?? "", status: project.status, coverImageUrl: project.coverImageUrl ?? "", coverImageKey: project.coverImageKey ?? "", coverImageAlt: project.coverImageAlt ?? "", metaDescription: project.metaDescription ?? "" });
     }
   }, [project]);
 
@@ -62,7 +62,7 @@ export default function AdminProjectEditor() {
   }
 
   function saveProject() {
-    updateProjectMutation.mutate({ id: projectId, title: form.title, shortDescription: form.shortDescription, year: form.year, categoryId: form.categoryId ? Number(form.categoryId) : null, status: form.status, coverImageUrl: form.coverImageUrl, coverImageKey: form.coverImageKey, coverImageAlt: form.coverImageAlt, metaDescription: form.metaDescription });
+    updateProjectMutation.mutate({ id: projectId, title: form.title, shortDescription: form.shortDescription, year: form.year, categoryId: form.categoryId ? Number(form.categoryId) : null, subcategory: form.subcategory.trim(), status: form.status, coverImageUrl: form.coverImageUrl, coverImageKey: form.coverImageKey, coverImageAlt: form.coverImageAlt, metaDescription: form.metaDescription });
   }
 
   function addBlock(type: BlockType) {
@@ -124,6 +124,11 @@ export default function AdminProjectEditor() {
                   {categories?.map((c) => <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>)}
                 </SelectContent>
               </Select>
+            </div>
+            <div>
+              <Label htmlFor="proj-subcategory">Subtópico</Label>
+              <Input id="proj-subcategory" value={form.subcategory} onChange={(e) => setForm((f) => ({ ...f, subcategory: e.target.value }))} className="mt-1" placeholder="Ex.: Animações" />
+              <p className="mt-1 text-xs" style={{ color: "var(--color-text-secondary)" }}>Opcional. Ex.: Animações, Curtametragens, Cenários.</p>
             </div>
             <div>
               <Label htmlFor="proj-year">Ano</Label>
