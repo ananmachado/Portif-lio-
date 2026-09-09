@@ -12,8 +12,11 @@ export default function ProjectsPage() {
   const { data: projects, isLoading: projectsLoading, error: projectsError } = trpc.projects.listPublished.useQuery({ userId: ownerId }, { enabled: ownerId > 0 });
   const { data: categories, isLoading: categoriesLoading } = trpc.categories.listPublic.useQuery({ userId: ownerId }, { enabled: ownerId > 0 });
   const [activeCategory, setActiveCategory] = useState<number | null>(null);
+  const [activeSubcategory, setActiveSubcategory] = useState<string | null>(null);
   const ctaLabel = settings?.ctaViewProject ?? "Ver projeto";
-  const displayedProjects = activeCategory === null ? (projects ?? []) : (projects ?? []).filter((project) => project.categoryId === activeCategory);
+  const categoryProjects = activeCategory === null ? (projects ?? []) : (projects ?? []).filter((project) => project.categoryId === activeCategory);
+  const subcategories = Array.from(new Set(categoryProjects.map((project) => project.subcategory?.trim()).filter((value): value is string => Boolean(value))));
+  const displayedProjects = activeSubcategory === null ? categoryProjects : categoryProjects.filter((project) => project.subcategory?.trim() === activeSubcategory);
 
   return (
     <PublicLayout>
@@ -29,8 +32,17 @@ export default function ProjectsPage() {
         <div className="container">
           {!categoriesLoading && categories && categories.length > 0 && (
             <nav aria-label="Filtrar projetos por categoria" className="shelf-filters">
-              <button onClick={() => setActiveCategory(null)} aria-pressed={activeCategory === null}>Todos</button>
-              {categories.map((category) => <button key={category.id} onClick={() => setActiveCategory(category.id)} aria-pressed={activeCategory === category.id}>{category.name}</button>)}
+              <button onClick={() => { setActiveCategory(null); setActiveSubcategory(null); }} aria-pressed={activeCategory === null}>Todos</button>
+              {categories.map((category) => <button key={category.id} onClick={() => { setActiveCategory(category.id); setActiveSubcategory(null); }} aria-pressed={activeCategory === category.id}>{category.name}</button>)}
+            </nav>
+          )}
+
+          {activeCategory !== null && subcategories.length > 0 && (
+            <nav aria-label="Filtrar projetos por subtópico" className="shelf-filters mt-3">
+              <button onClick={() => setActiveSubcategory(null)} aria-pressed={activeSubcategory === null}>Todos em {categories?.find((category) => category.id === activeCategory)?.name ?? "categoria"}</button>
+              {subcategories.map((subcategory) => (
+                <button key={subcategory} onClick={() => setActiveSubcategory(subcategory)} aria-pressed={activeSubcategory === subcategory}>{subcategory}</button>
+              ))}
             </nav>
           )}
 
@@ -39,7 +51,7 @@ export default function ProjectsPage() {
           ) : projectsError ? (
             <p className="empty-catalog" role="alert">Não foi possível carregar a vitrine de projetos. Atualize a página e tente novamente.</p>
           ) : displayedProjects.length === 0 ? (
-            <p className="empty-catalog" role="status">{activeCategory !== null ? "Ainda não há projetos nesta categoria." : "Nenhum projeto publicado por enquanto."}</p>
+            <p className="empty-catalog" role="status">{activeSubcategory !== null ? `Ainda não há projetos em “${activeSubcategory}”.` : activeCategory !== null ? "Ainda não há projetos nesta categoria." : "Nenhum projeto publicado por enquanto."}</p>
           ) : (
             <ul className="project-shelf" aria-live="polite" aria-label="Projetos publicados">
               {displayedProjects.map((project) => {
@@ -50,7 +62,7 @@ export default function ProjectsPage() {
                       <Link href={`/projetos/${project.slug}`} className="project-thumb" aria-label={`${ctaLabel}: ${project.title}`}>
                         {project.coverImageUrl ? <img src={project.coverImageUrl} alt={project.coverImageAlt ?? project.title} loading="lazy" /> : <span className="project-thumb--empty">{project.title.slice(0, 1).toUpperCase()}</span>}
                       </Link>
-                      <p className="project-shelf-card__meta">{category?.name || "Projeto autoral"}{project.year ? ` · ${project.year}` : ""}</p>
+                      <p className="project-shelf-card__meta">{category?.name || "Projeto autoral"}{project.subcategory ? ` · ${project.subcategory}` : ""}{project.year ? ` · ${project.year}` : ""}</p>
                       <h2>{project.title}</h2>
                       {project.shortDescription && <p className="project-shelf-card__description">{project.shortDescription}</p>}
                       <Link href={`/projetos/${project.slug}`} className="project-shelf-card__link">{ctaLabel}</Link>
