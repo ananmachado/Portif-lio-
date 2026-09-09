@@ -194,13 +194,14 @@ export const appRouter = router({
         z.object({
           title: z.string().min(1).max(255),
           categoryId: z.number().nullable().optional(),
+          subcategory: z.string().max(255).optional(),
           shortDescription: z.string().optional(),
           year: z.string().max(10).optional(),
           metaDescription: z.string().optional(),
         })
       )
       .mutation(({ ctx, input }) =>
-        createProject({ userId: ctx.user.id, title: input.title, slug: slugify(input.title), categoryId: input.categoryId ?? null, shortDescription: input.shortDescription ?? "", year: input.year ?? "", metaDescription: input.metaDescription ?? "" })
+        createProject({ userId: ctx.user.id, title: input.title, slug: slugify(input.title), categoryId: input.categoryId ?? null, subcategory: input.subcategory ?? "", shortDescription: input.shortDescription ?? "", year: input.year ?? "", metaDescription: input.metaDescription ?? "" })
       ),
 
     update: adminProcedure
@@ -209,6 +210,7 @@ export const appRouter = router({
           id: z.number(),
           title: z.string().min(1).max(255).optional(),
           categoryId: z.number().nullable().optional(),
+          subcategory: z.string().max(255).optional(),
           shortDescription: z.string().optional(),
           coverImageUrl: z.string().optional(),
           coverImageKey: z.string().optional(),
