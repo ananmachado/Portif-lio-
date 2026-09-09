@@ -1,4 +1,4 @@
-import { assertSupabaseServerConfig, ENV } from "./_core/env.js";
+import { assertSupabaseServerConfig, ENV } from "./_core/env";
 import type {
   Category,
   InsertCategory,
@@ -311,8 +311,22 @@ export async function getCategoriesByUser(userId: number) {
   });
 }
 
+export async function getCategoryById(id: number, userId: number) {
+  return selectOne<Category>("categories", [
+    ["id", "eq", id],
+    ["userId", "eq", userId],
+  ]);
+}
+
 export async function createCategory(data: InsertCategory) {
-  return insertOne<Category>("categories", data);
+  const categories = await getCategoriesByUser(data.userId);
+  const siblings = categories.filter((category) => category.parentCategoryId === (data.parentCategoryId ?? null));
+  const nextDisplayOrder = siblings.reduce((max, category) => Math.max(max, category.displayOrder), -1) + 1;
+  return insertOne<Category>("categories", {
+    ...data,
+    parentCategoryId: data.parentCategoryId ?? null,
+    displayOrder: data.displayOrder ?? nextDisplayOrder,
+  });
 }
 
 export async function updateCategory(id: number, userId: number, data: Partial<InsertCategory>) {
