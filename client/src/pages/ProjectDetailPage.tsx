@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import { Link, useParams } from "wouter";
 import { ArrowLeft } from "lucide-react";
 import { usePortfolio } from "@/contexts/PortfolioContext";
@@ -10,8 +10,8 @@ import { useSEO } from "@/hooks/useSEO";
 
 export default function ProjectDetailPage() {
   const { slug = "" } = useParams<{ slug: string }>();
-  const [coverFit, setCoverFit] = useState<"cover" | "contain">("cover");
   const { ownerId, settings } = usePortfolio();
+  const [coverOrientation, setCoverOrientation] = React.useState<"portrait" | "landscape">("landscape");
   const { data: project, isLoading: projectLoading, error } = trpc.projects.getBySlug.useQuery({ slug, userId: ownerId }, { enabled: Boolean(slug) && ownerId > 0 });
   const { data: categories } = trpc.categories.listPublic.useQuery({ userId: ownerId }, { enabled: ownerId > 0 });
   const { data: blocks, isLoading: blocksLoading } = trpc.blocks.listPublic.useQuery({ projectId: project?.id ?? 0 }, { enabled: Boolean(project?.id) });
@@ -44,18 +44,22 @@ export default function ProjectDetailPage() {
               {project.shortDescription && <p className="project-story__description">{project.shortDescription}</p>}
               {project.year && <p className="project-story__year">Ano · {project.year}</p>}
             </header>
-            <div className={`project-cover project-cover--${coverFit}`}>
+            <div className={`project-cover${coverOrientation === "portrait" ? " project-cover--portrait" : ""}`}>
               {project.coverImageUrl ? (
                 <img
                   src={project.coverImageUrl}
                   alt={project.coverImageAlt ?? project.title}
                   onLoad={(event) => {
                     const image = event.currentTarget;
-                    setCoverFit(image.naturalHeight > image.naturalWidth ? "contain" : "cover");
+                    setCoverOrientation(
+                      image.naturalHeight > image.naturalWidth ? "portrait" : "landscape"
+                    );
                   }}
                 />
               ) : (
-                <div className="project-thumb--empty h-full min-h-[20rem]">{project.title.slice(0, 1).toUpperCase()}</div>
+                <div className="project-thumb--empty h-full min-h-[20rem]">
+                  {project.title.slice(0, 1).toUpperCase()}
+                </div>
               )}
             </div>
           </div>
