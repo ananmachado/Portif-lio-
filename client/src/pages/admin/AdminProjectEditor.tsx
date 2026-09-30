@@ -11,9 +11,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
 import { Loader2, Upload, ChevronUp, ChevronDown, Trash2, Plus, Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { useFileUpload } from "@/hooks/useFileUpload";
-import type { ProjectBlock } from "../../../../drizzle/schema";
+import type { ProjectBlock, ProjectLayoutConfig } from "../../../../drizzle/schema";
 
 type BlockType = "text" | "image" | "youtube" | "audio";
+
+const DEFAULT_LAYOUT: ProjectLayoutConfig = {
+  heroLayout: "split",
+  heroImageSize: "large",
+  heroGap: "large",
+  contentWidth: "medium",
+  contentAlign: "left",
+  imageFit: "contain",
+  showBreadcrumb: true,
+};
 
 export default function AdminProjectEditor() {
   const params = useParams<{ id: string }>();
@@ -32,13 +42,37 @@ export default function AdminProjectEditor() {
   const deleteBlockMutation = trpc.blocks.delete.useMutation({ onSuccess: () => { toast.success("Bloco removido!"); utils.blocks.list.invalidate({ projectId }); setDeleteBlockId(null); }, onError: (e) => toast.error(e.message) });
   const reorderMutation = trpc.blocks.reorder.useMutation({ onSuccess: () => utils.blocks.list.invalidate({ projectId }) });
 
-  const [form, setForm] = useState({ title: "", shortDescription: "", year: "", categoryId: "", subcategory: "", status: "draft" as "draft" | "published", coverImageUrl: "", coverImageKey: "", coverImageAlt: "", metaDescription: "" });
+  const [form, setForm] = useState({
+    title: "",
+    shortDescription: "",
+    year: "",
+    categoryId: "",
+    subcategory: "",
+    status: "draft" as "draft" | "published",
+    coverImageUrl: "",
+    coverImageKey: "",
+    coverImageAlt: "",
+    metaDescription: "",
+    layoutConfig: DEFAULT_LAYOUT,
+  });
   const [deleteBlockId, setDeleteBlockId] = useState<number | null>(null);
   const [editingBlock, setEditingBlock] = useState<Record<number, Partial<ProjectBlock>>>({});
 
   useEffect(() => {
     if (project) {
-      setForm({ title: project.title, shortDescription: project.shortDescription ?? "", year: project.year ?? "", categoryId: project.categoryId ? String(project.categoryId) : "", subcategory: project.subcategory ?? "", status: project.status, coverImageUrl: project.coverImageUrl ?? "", coverImageKey: project.coverImageKey ?? "", coverImageAlt: project.coverImageAlt ?? "", metaDescription: project.metaDescription ?? "" });
+      setForm({
+        title: project.title,
+        shortDescription: project.shortDescription ?? "",
+        year: project.year ?? "",
+        categoryId: project.categoryId ? String(project.categoryId) : "",
+        subcategory: project.subcategory ?? "",
+        status: project.status,
+        coverImageUrl: project.coverImageUrl ?? "",
+        coverImageKey: project.coverImageKey ?? "",
+        coverImageAlt: project.coverImageAlt ?? "",
+        metaDescription: project.metaDescription ?? "",
+        layoutConfig: { ...DEFAULT_LAYOUT, ...(project.layoutConfig ?? {}) },
+      });
     }
   }, [project]);
 
@@ -62,7 +96,20 @@ export default function AdminProjectEditor() {
   }
 
   function saveProject() {
-    updateProjectMutation.mutate({ id: projectId, title: form.title, shortDescription: form.shortDescription, year: form.year, categoryId: form.categoryId ? Number(form.categoryId) : null, subcategory: form.subcategory.trim(), status: form.status, coverImageUrl: form.coverImageUrl, coverImageKey: form.coverImageKey, coverImageAlt: form.coverImageAlt, metaDescription: form.metaDescription });
+    updateProjectMutation.mutate({
+      id: projectId,
+      title: form.title,
+      shortDescription: form.shortDescription,
+      year: form.year,
+      categoryId: form.categoryId ? Number(form.categoryId) : null,
+      subcategory: form.subcategory.trim(),
+      status: form.status,
+      coverImageUrl: form.coverImageUrl,
+      coverImageKey: form.coverImageKey,
+      coverImageAlt: form.coverImageAlt,
+      metaDescription: form.metaDescription,
+      layoutConfig: form.layoutConfig,
+    });
   }
 
   function addBlock(type: BlockType) {
@@ -163,6 +210,98 @@ export default function AdminProjectEditor() {
               </div>
             </div>
           </div>
+          {/* Page layout */}
+          <section aria-labelledby="layout-heading" className="mt-6 rounded border p-5 space-y-5" style={{ borderColor: "var(--color-border)", background: "var(--color-background)" }}>
+            <div>
+              <h3 id="layout-heading" className="font-semibold" style={{ color: "var(--color-text-primary)" }}>Layout da página</h3>
+              <p className="mt-1 text-sm" style={{ color: "var(--color-text-secondary)" }}>
+                Controle a posição da capa, o tamanho da área principal e o espaçamento desta página sem alterar o layout dos outros projetos.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="layout-hero">Disposição do topo</Label>
+                <Select value={form.layoutConfig.heroLayout ?? DEFAULT_LAYOUT.heroLayout} onValueChange={(value) => setForm((f) => ({ ...f, layoutConfig: { ...f.layoutConfig, heroLayout: value as ProjectLayoutConfig["heroLayout"] } }))}>
+                  <SelectTrigger id="layout-hero" className="mt-1"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="split">Texto à esquerda · imagem à direita</SelectItem>
+                    <SelectItem value="image-left">Imagem à esquerda · texto à direita</SelectItem>
+                    <SelectItem value="stacked">Texto acima · imagem abaixo</SelectItem>
+                    <SelectItem value="centered">Conteúdo centralizado</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="layout-image-size">Tamanho da capa</Label>
+                <Select value={form.layoutConfig.heroImageSize ?? DEFAULT_LAYOUT.heroImageSize} onValueChange={(value) => setForm((f) => ({ ...f, layoutConfig: { ...f.layoutConfig, heroImageSize: value as ProjectLayoutConfig["heroImageSize"] } }))}>
+                  <SelectTrigger id="layout-image-size" className="mt-1"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="small">Pequena</SelectItem>
+                    <SelectItem value="medium">Média</SelectItem>
+                    <SelectItem value="large">Grande</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="layout-gap">Espaçamento</Label>
+                <Select value={form.layoutConfig.heroGap ?? DEFAULT_LAYOUT.heroGap} onValueChange={(value) => setForm((f) => ({ ...f, layoutConfig: { ...f.layoutConfig, heroGap: value as ProjectLayoutConfig["heroGap"] } }))}>
+                  <SelectTrigger id="layout-gap" className="mt-1"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="small">Compacto</SelectItem>
+                    <SelectItem value="medium">Médio</SelectItem>
+                    <SelectItem value="large">Amplo</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="layout-width">Largura do conteúdo</Label>
+                <Select value={form.layoutConfig.contentWidth ?? DEFAULT_LAYOUT.contentWidth} onValueChange={(value) => setForm((f) => ({ ...f, layoutConfig: { ...f.layoutConfig, contentWidth: value as ProjectLayoutConfig["contentWidth"] } }))}>
+                  <SelectTrigger id="layout-width" className="mt-1"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="narrow">Estreita</SelectItem>
+                    <SelectItem value="medium">Média</SelectItem>
+                    <SelectItem value="wide">Ampla</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="layout-align">Alinhamento do texto</Label>
+                <Select value={form.layoutConfig.contentAlign ?? DEFAULT_LAYOUT.contentAlign} onValueChange={(value) => setForm((f) => ({ ...f, layoutConfig: { ...f.layoutConfig, contentAlign: value as ProjectLayoutConfig["contentAlign"] } }))}>
+                  <SelectTrigger id="layout-align" className="mt-1"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="left">À esquerda</SelectItem>
+                    <SelectItem value="center">Centralizado</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="layout-fit">Ajuste da imagem</Label>
+                <Select value={form.layoutConfig.imageFit ?? DEFAULT_LAYOUT.imageFit} onValueChange={(value) => setForm((f) => ({ ...f, layoutConfig: { ...f.layoutConfig, imageFit: value as ProjectLayoutConfig["imageFit"] } }))}>
+                  <SelectTrigger id="layout-fit" className="mt-1"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="contain">Mostrar imagem inteira</SelectItem>
+                    <SelectItem value="cover">Preencher a área</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <label className="flex items-center gap-3 text-sm cursor-pointer" style={{ color: "var(--color-text-primary)" }}>
+              <input
+                type="checkbox"
+                checked={form.layoutConfig.showBreadcrumb ?? true}
+                onChange={(event) => setForm((f) => ({ ...f, layoutConfig: { ...f.layoutConfig, showBreadcrumb: event.target.checked } }))}
+              />
+              Mostrar caminho “Projetos / nome do projeto”
+            </label>
+          </section>
+
           {/* Status */}
           <div className="flex items-center gap-4">
             <Button onClick={() => { setForm((f) => ({ ...f, status: f.status === "published" ? "draft" : "published" })); }} variant="outline" className="flex items-center gap-2">
