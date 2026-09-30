@@ -43,6 +43,35 @@ export interface ThemeConfig {
   motionEasing?: string;
   ctaViewProject?: string;
   ctaSendMessage?: string;
+
+  // Textos editáveis das páginas públicas
+  siteRibbon?: string;
+  homeEyebrow?: string;
+  homeProjectsButton?: string;
+  homeContactButton?: string;
+  homeFeaturedEyebrow?: string;
+  homeFeaturedTitle?: string;
+  homeFeaturedDescription?: string;
+  homeManifestoEyebrow?: string;
+  homeManifestoTitle?: string;
+  homeManifestoButton?: string;
+  projectsEyebrow?: string;
+  projectsTitle?: string;
+  projectsDescription?: string;
+  projectsAllFilter?: string;
+  aboutEyebrow?: string;
+  contactEyebrow?: string;
+  contactTitle?: string;
+  contactDefaultIntro?: string;
+  contactSubmittedTitle?: string;
+  contactSubmittedDescription?: string;
+  contactResendButton?: string;
+  contactNameLabel?: string;
+  contactSubjectLabel?: string;
+  contactMessageLabel?: string;
+  footerNavigationLabel?: string;
+  footerFindLabel?: string;
+  footerBottom?: string;
 }
 
 export interface User {
