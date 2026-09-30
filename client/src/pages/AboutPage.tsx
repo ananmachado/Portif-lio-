@@ -17,7 +17,7 @@ export default function AboutPage() {
           {isLoading ? <Skeleton className="aspect-[.9] w-full" /> : <div className="about-portrait">{settings?.profileImageUrl ? <img src={settings.profileImageUrl} alt="Retrato de apresentação" /> : <div className="about-portrait__placeholder" aria-hidden="true">{monogram}</div>}</div>}
           <div>
             {isLoading ? <div className="space-y-4" aria-busy="true"><Skeleton className="h-5 w-28" /><Skeleton className="h-16 w-2/3" /><Skeleton className="h-28 w-full" /></div> : <>
-              <p className="site-eyebrow">Quem cria</p>
+              <p className="site-eyebrow">{settings?.themeConfig?.aboutEyebrow || "Quem cria"}</p>
               <h1 id="about-heading">{settings?.aboutTitle || "Sobre"}</h1>
               {settings?.shortBio && <p className="about-editorial__bio">{settings.shortBio}</p>}
               {settings?.location && <p className="project-story__year">Base · {settings.location}</p>}
