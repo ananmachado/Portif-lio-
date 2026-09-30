@@ -22,9 +22,9 @@ export default function ProjectsPage() {
     <PublicLayout>
       <header className="editorial-page-header" aria-labelledby="projects-heading">
         <div className="container">
-          <p className="site-eyebrow">Catálogo autoral</p>
-          <h1 id="projects-heading">Projetos</h1>
-          <p>Explore trabalhos, processos e experimentos organizados por categoria.</p>
+          <p className="site-eyebrow">{settings?.themeConfig?.projectsEyebrow || "Catálogo autoral"}</p>
+          <h1 id="projects-heading">{settings?.themeConfig?.projectsTitle || "Projetos"}</h1>
+          <p>{settings?.themeConfig?.projectsDescription || "Explore trabalhos, processos e experimentos organizados por categoria."}</p>
         </div>
       </header>
 
@@ -32,7 +32,7 @@ export default function ProjectsPage() {
         <div className="container">
           {!categoriesLoading && categories && categories.length > 0 && (
             <nav aria-label="Filtrar projetos por categoria" className="shelf-filters">
-              <button onClick={() => { setActiveCategory(null); setActiveSubcategory(null); }} aria-pressed={activeCategory === null}>Todos</button>
+              <button onClick={() => { setActiveCategory(null); setActiveSubcategory(null); }} aria-pressed={activeCategory === null}>{settings?.themeConfig?.projectsAllFilter || "Todos"}</button>
               {categories.map((category) => <button key={category.id} onClick={() => { setActiveCategory(category.id); setActiveSubcategory(null); }} aria-pressed={activeCategory === category.id}>{category.name}</button>)}
             </nav>
           )}
