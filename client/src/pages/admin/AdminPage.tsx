@@ -11,6 +11,7 @@ import AdminProjectEditor from "./AdminProjectEditor";
 import AdminAppearance from "./AdminAppearance";
 import AdminContact from "./AdminContact";
 import AdminSettings from "./AdminSettings";
+import AdminContent from "./AdminContent";
 import AdminUsers from "./AdminUsers";
 import { canAccessAdmin } from "@shared/accessControl";
 
@@ -55,6 +56,7 @@ export default function AdminPage() {
       <Route path="/admin/aparencia" component={AdminAppearance} />
       <Route path="/admin/contato" component={AdminContact} />
       <Route path="/admin/configuracoes" component={AdminSettings} />
+      <Route path="/admin/conteudo" component={AdminContent} />
       <Route path="/admin/usuarios" component={AdminUsers} />
     </Switch>
   );
