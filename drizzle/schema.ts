@@ -104,6 +104,21 @@ export type InsertCategory = Partial<Omit<Category, "id" | "createdAt">> & {
   slug: string;
 };
 
+export type ProjectHeroLayout = "split" | "image-left" | "stacked" | "centered";
+export type ProjectLayoutSize = "small" | "medium" | "large";
+export type ProjectContentWidth = "narrow" | "medium" | "wide";
+export type ProjectImageFit = "contain" | "cover";
+
+export interface ProjectLayoutConfig {
+  heroLayout?: ProjectHeroLayout;
+  heroImageSize?: ProjectLayoutSize;
+  heroGap?: ProjectLayoutSize;
+  contentWidth?: ProjectContentWidth;
+  contentAlign?: "left" | "center";
+  imageFit?: ProjectImageFit;
+  showBreadcrumb?: boolean;
+}
+
 export interface Project {
   id: number;
   userId: number;
@@ -120,6 +135,7 @@ export interface Project {
   featured: boolean;
   displayOrder: number;
   metaDescription: string | null;
+  layoutConfig: ProjectLayoutConfig | null;
   createdAt: Date | string;
   updatedAt: Date | string;
 }
