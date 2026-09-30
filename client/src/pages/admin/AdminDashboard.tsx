@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "wouter";
-import { Briefcase, FolderOpen, Palette, Settings, User, UsersRound, Phone, ExternalLink } from "lucide-react";
+import { Briefcase, FolderOpen, Palette, Settings, User, UsersRound, Phone, ExternalLink, FileText } from "lucide-react";
 import AdminLayout from "./AdminLayout";
 
 const cards = [
@@ -10,6 +10,7 @@ const cards = [
   { href: "/admin/aparencia", label: "Aparência", description: "Personalizar cores, tipografia e identidade visual.", icon: Palette },
   { href: "/admin/contato", label: "Contato", description: "Atualizar informações e canais de contato.", icon: Phone },
   { href: "/admin/configuracoes", label: "Configurações", description: "Gerenciar as configurações gerais do portfólio.", icon: Settings },
+  { href: "/admin/conteudo", label: "Conteúdo do site", description: "Editar os textos das páginas públicas.", icon: FileText },
   { href: "/admin/usuarios", label: "Usuários", description: "Gerenciar usuários e permissões administrativas.", icon: UsersRound },
 ];
 
