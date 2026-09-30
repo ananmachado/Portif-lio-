@@ -43,7 +43,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
   return (
     <div className="min-h-screen flex flex-col">
       <a href="#main-content" className="skip-link">Pular para o conteúdo principal</a>
-      <div className="site-ribbon" aria-hidden="true">Portfólio autoral · ideias, imagens e histórias</div>
+      <div className="site-ribbon" aria-hidden="true">{settings?.themeConfig?.siteRibbon || "Portfólio autoral · ideias, imagens e histórias"}</div>
 
       <header className="editorial-header">
         <div className="container editorial-header__inner">
@@ -114,13 +114,13 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
               <h2>{settings?.tagline || "Há coisas que só você pode criar."}</h2>
             </div>
             <div>
-              <p className="footer-kicker">Navegação</p>
+              <p className="footer-kicker">{settings?.themeConfig?.footerNavigationLabel || "Navegação"}</p>
               <ul className="footer-links mt-3">
                 {navLinks.map(({ href, label }) => <li key={href}><Link href={href}>{label}</Link></li>)}
               </ul>
             </div>
             <div>
-              <p className="footer-kicker">Encontrar</p>
+              <p className="footer-kicker">{settings?.themeConfig?.footerFindLabel || "Encontrar"}</p>
               <ul className="footer-links mt-3">
                 {settings?.emailPublic && <li><a href={`mailto:${settings.emailPublic}`}>{settings.emailPublic}</a></li>}
                 {settings?.socialLinks?.map((link) => <li key={link.url}><a href={link.url} target="_blank" rel="noopener noreferrer">{link.label}</a></li>)}
@@ -128,7 +128,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
               </ul>
             </div>
           </div>
-          <p className="footer-bottom">© {new Date().getFullYear()} {portfolioName}. Feito para guardar boas ideias.</p>
+          <p className="footer-bottom">© {new Date().getFullYear()} {portfolioName}. {settings?.themeConfig?.footerBottom || "Feito para guardar boas ideias."}</p>
         </div>
       </footer>
     </div>
