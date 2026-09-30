@@ -220,6 +220,15 @@ export const appRouter = router({
           featured: z.boolean().optional(),
           displayOrder: z.number().optional(),
           metaDescription: z.string().optional(),
+          layoutConfig: z.object({
+            heroLayout: z.enum(["split", "image-left", "stacked", "centered"]).optional(),
+            heroImageSize: z.enum(["small", "medium", "large"]).optional(),
+            heroGap: z.enum(["small", "medium", "large"]).optional(),
+            contentWidth: z.enum(["narrow", "medium", "wide"]).optional(),
+            contentAlign: z.enum(["left", "center"]).optional(),
+            imageFit: z.enum(["contain", "cover"]).optional(),
+            showBreadcrumb: z.boolean().optional(),
+          }).optional(),
         })
       )
       .mutation(({ ctx, input }) => {
