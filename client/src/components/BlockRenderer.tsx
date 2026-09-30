@@ -34,5 +34,41 @@ function AudioBlock({ mediaUrl, caption, transcript }: { mediaUrl: string; capti
 }
 
 export default function BlockRenderer({ blocks }: { blocks: Block[] }) {
-  return <div className="flex flex-col gap-10">{blocks.map((block) => <section key={block.id} aria-label={`Bloco de conteúdo: ${block.type}`}>{block.type === "text" && block.content && <TextBlock content={block.content} />}{block.type === "image" && block.mediaUrl && <ImageBlock mediaUrl={block.mediaUrl} altText={block.altText} caption={block.caption} />}{block.type === "youtube" && block.mediaUrl && <YoutubeBlock mediaUrl={block.mediaUrl} caption={block.caption} />}{block.type === "audio" && block.mediaUrl && <AudioBlock mediaUrl={block.mediaUrl} caption={block.caption} transcript={block.transcript} />}</section>)}</div>;
+  const elements: React.ReactNode[] = [];
+  let imageGroup: Block[] = [];
+
+  const flushImageGroup = () => {
+    if (!imageGroup.length) return;
+    const group = imageGroup;
+    imageGroup = [];
+    elements.push(
+      <div className="editorial-gallery" key={`gallery-${group[0].id}`}>
+        {group.map((block) => (
+          <ImageBlock key={block.id} mediaUrl={block.mediaUrl!} altText={block.altText} caption={block.caption} />
+        ))}
+      </div>
+    );
+  };
+
+  blocks.forEach((block) => {
+    if (block.type === "image" && block.mediaUrl) {
+      imageGroup.push(block);
+      return;
+    }
+
+    flushImageGroup();
+
+    if (block.type === "text" && block.content) {
+      elements.push(<section key={block.id} className="editorial-content-block"><TextBlock content={block.content} /></section>);
+    }
+    if (block.type === "youtube" && block.mediaUrl) {
+      elements.push(<section key={block.id} className="editorial-content-block"><YoutubeBlock mediaUrl={block.mediaUrl} caption={block.caption} /></section>);
+    }
+    if (block.type === "audio" && block.mediaUrl) {
+      elements.push(<section key={block.id} className="editorial-content-block"><AudioBlock mediaUrl={block.mediaUrl} caption={block.caption} transcript={block.transcript} /></section>);
+    }
+  });
+
+  flushImageGroup();
+  return <div className="project-content-flow">{elements}</div>;
 }
