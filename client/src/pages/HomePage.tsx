@@ -27,12 +27,12 @@ export default function HomePage() {
               <div className="space-y-4" aria-busy="true"><Skeleton className="h-5 w-36" /><Skeleton className="h-32 w-full" /><Skeleton className="h-20 w-4/5" /></div>
             ) : (
               <>
-                <p className="site-eyebrow">Portfólio criativo</p>
+                <p className="site-eyebrow">{settings?.themeConfig?.homeEyebrow || "Portfólio criativo"}</p>
                 <h1 id="hero-heading">{settings?.tagline || "Ideias para ver, sentir e guardar."}</h1>
                 <p className="home-hero__lead">{settings?.shortBio || "Um espaço autoral para reunir projetos, processos e histórias em movimento."}</p>
                 <div className="hero-actions">
-                  <Link href="/projetos" className="editorial-button">Conheça os projetos</Link>
-                  <Link href="/contato" className="editorial-button editorial-button--outline">Vamos conversar</Link>
+                  <Link href="/projetos" className="editorial-button">{settings?.themeConfig?.homeProjectsButton || "Conheça os projetos"}</Link>
+                  <Link href="/contato" className="editorial-button editorial-button--outline">{settings?.themeConfig?.homeContactButton || "Vamos conversar"}</Link>
                 </div>
               </>
             )}
@@ -47,9 +47,9 @@ export default function HomePage() {
       <section className="editorial-section" aria-labelledby="featured-heading">
         <div className="container">
           <div className="section-heading">
-            <p className="site-eyebrow">Seleção autoral</p>
-            <h2 id="featured-heading">Projetos em destaque</h2>
-            <p>Uma vitrine de processos, imagens e narrativas criadas com intenção.</p>
+            <p className="site-eyebrow">{settings?.themeConfig?.homeFeaturedEyebrow || "Seleção autoral"}</p>
+            <h2 id="featured-heading">{settings?.themeConfig?.homeFeaturedTitle || "Projetos em destaque"}</h2>
+            <p>{settings?.themeConfig?.homeFeaturedDescription || "Uma vitrine de processos, imagens e narrativas criadas com intenção."}</p>
           </div>
 
           {projectsLoading ? (
@@ -87,10 +87,10 @@ export default function HomePage() {
         <div className="container manifesto-grid">
           <div className="manifesto-tile" aria-hidden="true"><span>criar<br />é cultivar</span></div>
           <div className="manifesto-copy">
-            <p className="site-eyebrow">Sobre o processo</p>
-            <h2 id="manifesto-heading">Toda boa ideia merece ganhar forma.</h2>
+            <p className="site-eyebrow">{settings?.themeConfig?.homeManifestoEyebrow || "Sobre o processo"}</p>
+            <h2 id="manifesto-heading">{settings?.themeConfig?.homeManifestoTitle || "Toda boa ideia merece ganhar forma."}</h2>
             <p>{settings?.aboutText ? settings.aboutText.split("\n").find((paragraph) => paragraph.trim()) : "Este portfólio reúne trabalhos e pequenos rastros do que acontece antes, durante e depois de uma ideia ganhar o mundo."}</p>
-            <div className="mt-7"><Link href="/sobre" className="editorial-button">Conheça a história</Link></div>
+            <div className="mt-7"><Link href="/sobre" className="editorial-button">{settings?.themeConfig?.homeManifestoButton || "Conheça a história"}</Link></div>
           </div>
         </div>
       </section>
