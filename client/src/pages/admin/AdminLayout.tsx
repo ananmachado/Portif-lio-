@@ -10,6 +10,7 @@ import {
   Palette,
   Phone,
   Settings,
+  FileText,
   LogOut,
   ExternalLink,
   UsersRound,
@@ -23,6 +24,7 @@ const navItems = [
   { href: "/admin/aparencia", label: "Aparência", icon: Palette },
   { href: "/admin/contato", label: "Contato", icon: Phone },
   { href: "/admin/configuracoes", label: "Configurações", icon: Settings },
+  { href: "/admin/conteudo", label: "Conteúdo do site", icon: FileText },
   { href: "/admin/usuarios", label: "Usuários", icon: UsersRound },
 ];
 
