@@ -11,7 +11,6 @@ import { useSEO } from "@/hooks/useSEO";
 export default function ProjectDetailPage() {
   const { slug = "" } = useParams<{ slug: string }>();
   const { ownerId, settings } = usePortfolio();
-  const [coverOrientation, setCoverOrientation] = React.useState<"portrait" | "landscape">("landscape");
   const { data: project, isLoading: projectLoading, error } = trpc.projects.getBySlug.useQuery({ slug, userId: ownerId }, { enabled: Boolean(slug) && ownerId > 0 });
   const { data: categories } = trpc.categories.listPublic.useQuery({ userId: ownerId }, { enabled: ownerId > 0 });
   const { data: blocks, isLoading: blocksLoading } = trpc.blocks.listPublic.useQuery({ projectId: project?.id ?? 0 }, { enabled: Boolean(project?.id) });
@@ -31,11 +30,24 @@ export default function ProjectDetailPage() {
     );
   }
 
+  const layout = {
+    heroLayout: "split" as const,
+    heroImageSize: "large" as const,
+    heroGap: "large" as const,
+    contentWidth: "medium" as const,
+    contentAlign: "left" as const,
+    imageFit: "contain" as const,
+    showBreadcrumb: true,
+    ...(project.layoutConfig ?? {}),
+  };
+
   return (
     <PublicLayout>
-      <article className="project-story">
+      <article
+        className={`project-story project-story--${layout.heroLayout} project-story--image-${layout.heroImageSize} project-story--gap-${layout.heroGap} project-story--content-${layout.contentWidth} project-story--align-${layout.contentAlign}`}
+      >
         <div className="container">
-          <nav aria-label="Localização atual" className="story-breadcrumb"><Link href="/projetos">Projetos</Link><span aria-hidden="true"> / </span><span aria-current="page">{project.title}</span></nav>
+          {layout.showBreadcrumb && <nav aria-label="Localização atual" className="story-breadcrumb"><Link href="/projetos">Projetos</Link><span aria-hidden="true"> / </span><span aria-current="page">{project.title}</span></nav>}
 
           <div className="project-story__hero">
             <header>
@@ -44,17 +56,11 @@ export default function ProjectDetailPage() {
               {project.shortDescription && <p className="project-story__description">{project.shortDescription}</p>}
               {project.year && <p className="project-story__year">Ano · {project.year}</p>}
             </header>
-            <div className={`project-cover${coverOrientation === "portrait" ? " project-cover--portrait" : ""}`}>
+            <div className={`project-cover project-cover--${layout.imageFit}`}>
               {project.coverImageUrl ? (
                 <img
                   src={project.coverImageUrl}
                   alt={project.coverImageAlt ?? project.title}
-                  onLoad={(event) => {
-                    const image = event.currentTarget;
-                    setCoverOrientation(
-                      image.naturalHeight > image.naturalWidth ? "portrait" : "landscape"
-                    );
-                  }}
                 />
               ) : (
                 <div className="project-thumb--empty h-full min-h-[20rem]">
