@@ -65,7 +65,16 @@ export default function ProjectDetailPage() {
           </div>
 
           <div className="project-story__content">
-            {blocksLoading ? <div className="space-y-6" aria-busy="true"><Skeleton className="h-32 w-full" /><Skeleton className="h-64 w-full" /></div> : blocks?.length ? <BlockRenderer blocks={blocks as Parameters<typeof BlockRenderer>[0]["blocks"]} /> : <p className="empty-catalog">Este projeto ainda não tem conteúdo detalhado.</p>}
+            {blocksLoading ? (
+              <div className="space-y-6" aria-busy="true">
+                <Skeleton className="h-32 w-full" />
+                <Skeleton className="h-64 w-full" />
+              </div>
+            ) : blocks?.length ? (
+              <BlockRenderer blocks={blocks as Parameters<typeof BlockRenderer>[0]["blocks"]} />
+            ) : (
+              <p className="empty-catalog">Este projeto ainda não tem conteúdo detalhado.</p>
+            )}
             <div className="story-back"><Link href="/projetos"><ArrowLeft size={15} aria-hidden="true" /> Voltar para projetos</Link></div>
           </div>
         </div>
