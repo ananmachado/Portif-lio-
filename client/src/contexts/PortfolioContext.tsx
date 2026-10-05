@@ -151,6 +151,34 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
           (publicSettings.themeConfig as ThemeConfig)?.ctaViewProject ?? "Ver projeto",
         ctaSendMessage:
           (publicSettings.themeConfig as ThemeConfig)?.ctaSendMessage ?? "Enviar pelo WhatsApp",
+        ribbonText:
+          (publicSettings.themeConfig as ThemeConfig)?.ribbonText ?? "Portfólio autoral · ideias, imagens e histórias",
+        homeHeroEyebrow:
+          (publicSettings.themeConfig as ThemeConfig)?.homeHeroEyebrow ?? "Portfólio criativo",
+        homeHeroTitle:
+          (publicSettings.themeConfig as ThemeConfig)?.homeHeroTitle ?? "Ideias para ver, sentir e guardar.",
+        homeHeroLead:
+          (publicSettings.themeConfig as ThemeConfig)?.homeHeroLead ?? "Um espaço autoral para reunir projetos, processos e histórias em movimento.",
+        homeHeroPrimaryCta:
+          (publicSettings.themeConfig as ThemeConfig)?.homeHeroPrimaryCta ?? "Conheça os projetos",
+        homeHeroSecondaryCta:
+          (publicSettings.themeConfig as ThemeConfig)?.homeHeroSecondaryCta ?? "Vamos conversar",
+        homeFeaturedEyebrow:
+          (publicSettings.themeConfig as ThemeConfig)?.homeFeaturedEyebrow ?? "Seleção autoral",
+        homeFeaturedTitle:
+          (publicSettings.themeConfig as ThemeConfig)?.homeFeaturedTitle ?? "Projetos em destaque",
+        homeFeaturedDescription:
+          (publicSettings.themeConfig as ThemeConfig)?.homeFeaturedDescription ?? "Uma vitrine de processos, imagens e narrativas criadas com intenção.",
+        homeManifestoTileText:
+          (publicSettings.themeConfig as ThemeConfig)?.homeManifestoTileText ?? "criar\né cultivar",
+        homeManifestoEyebrow:
+          (publicSettings.themeConfig as ThemeConfig)?.homeManifestoEyebrow ?? "Sobre o processo",
+        homeManifestoTitle:
+          (publicSettings.themeConfig as ThemeConfig)?.homeManifestoTitle ?? "Toda boa ideia merece ganhar forma.",
+        homeManifestoText:
+          (publicSettings.themeConfig as ThemeConfig)?.homeManifestoText ?? "Este portfólio reúne trabalhos e pequenos rastros do que acontece antes, durante e depois de uma ideia ganhar o mundo.",
+        homeManifestoCta:
+          (publicSettings.themeConfig as ThemeConfig)?.homeManifestoCta ?? "Conheça a história",
       }
     : null;
 
