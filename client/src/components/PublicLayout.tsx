@@ -22,6 +22,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
   const menuBtnRef = useRef<HTMLButtonElement>(null);
 
   const portfolioName = settings?.portfolioName ?? "Portfólio";
+  const ribbonText = settings?.themeConfig?.ribbonText?.trim() || "Portfólio autoral · ideias, imagens e histórias";
   const adminHref = user?.role === "admin" ? "/admin" : "/admin-login";
   const adminLabel = user?.role === "admin" ? "Painel" : "Admin";
 
@@ -43,7 +44,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
   return (
     <div className="min-h-screen flex flex-col">
       <a href="#main-content" className="skip-link">Pular para o conteúdo principal</a>
-      <div className="site-ribbon" aria-hidden="true">Portfólio autoral · ideias, imagens e histórias</div>
+      <div className="site-ribbon" aria-hidden="true">{ribbonText}</div>
 
       <header className="editorial-header">
         <div className="container editorial-header__inner">
