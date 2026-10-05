@@ -17,9 +17,13 @@ export default function AdminSettings() {
   });
   const { upload, uploading } = useFileUpload();
   const [form, setForm] = useState({ portfolioName: "", tagline: "", faviconUrl: "", faviconKey: "" });
+  const [ribbonText, setRibbonText] = useState("Portfólio autoral · ideias, imagens e histórias");
 
   useEffect(() => {
-    if (settings) setForm({ portfolioName: settings.portfolioName ?? "", tagline: settings.tagline ?? "", faviconUrl: settings.faviconUrl ?? "", faviconKey: settings.faviconKey ?? "" });
+    if (settings) {
+      setForm({ portfolioName: settings.portfolioName ?? "", tagline: settings.tagline ?? "", faviconUrl: settings.faviconUrl ?? "", faviconKey: settings.faviconKey ?? "" });
+      setRibbonText(settings.themeConfig?.ribbonText ?? "Portfólio autoral · ideias, imagens e histórias");
+    }
   }, [settings]);
 
   async function handleFaviconUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -43,6 +47,19 @@ export default function AdminSettings() {
           <Input id="tagline" value={form.tagline} onChange={(e) => setForm((f) => ({ ...f, tagline: e.target.value }))} className="mt-1" placeholder="Uma frase que define seu trabalho" />
         </div>
         <div>
+          <Label htmlFor="ribbon-text">Texto superior do cabeçalho</Label>
+          <Input
+            id="ribbon-text"
+            value={ribbonText}
+            onChange={(e) => setRibbonText(e.target.value)}
+            className="mt-1"
+            placeholder="Portfólio autoral · ideias, imagens e histórias"
+          />
+          <p className="mt-1 text-sm" style={{ color: "var(--color-text-secondary)" }}>
+            Este é o texto exibido na faixa no topo do portfólio.
+          </p>
+        </div>
+        <div>
           <Label>Favicon</Label>
           <div className="mt-2 flex items-center gap-4">
             {form.faviconUrl && <img src={form.faviconUrl} alt="Favicon atual" className="w-8 h-8 object-contain" />}
@@ -53,7 +70,14 @@ export default function AdminSettings() {
             </label>
           </div>
         </div>
-        <Button onClick={() => updateMutation.mutate(form)} disabled={updateMutation.isPending} style={{ background: "var(--color-primary)", color: "oklch(0.98 0 0)" }}>
+        <Button
+          onClick={() => updateMutation.mutate({
+            ...form,
+            themeConfig: { ...(settings?.themeConfig ?? {}), ribbonText },
+          })}
+          disabled={updateMutation.isPending}
+          style={{ background: "var(--color-primary)", color: "oklch(0.98 0 0)" }}
+        >
           {updateMutation.isPending ? <><Loader2 className="animate-spin mr-2" size={16} />Salvando...</> : "Salvar"}
         </Button>
       </div>
