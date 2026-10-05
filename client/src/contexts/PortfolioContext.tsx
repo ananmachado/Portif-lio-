@@ -3,8 +3,81 @@ import { trpc } from "@/lib/trpc";
 import { useTheme } from "@/contexts/ThemeContext";
 import type { ThemeConfig } from "../../../drizzle/schema";
 
+export type HomeLayoutMode =
+  | "grid"
+  | "split"
+  | "stack"
+  | "asymmetric"
+  | "masonry"
+  | "reverse"
+  | "featured-first";
+
+export type HomeLayoutGap = "small" | "medium" | "large";
+
+export interface HomeGridConfig {
+  desktopColumns: number;
+  mobileColumns: number;
+  mode: HomeLayoutMode;
+  gap: HomeLayoutGap;
+}
+
+export interface HomeLayoutConfig {
+  hero: HomeGridConfig;
+  featured: HomeGridConfig;
+  manifesto: HomeGridConfig;
+}
+
+const DEFAULT_HOME_LAYOUT: HomeLayoutConfig = {
+  hero: {
+    desktopColumns: 2,
+    mobileColumns: 1,
+    mode: "split",
+    gap: "large",
+  },
+  featured: {
+    desktopColumns: 3,
+    mobileColumns: 2,
+    mode: "grid",
+    gap: "medium",
+  },
+  manifesto: {
+    desktopColumns: 2,
+    mobileColumns: 1,
+    mode: "split",
+    gap: "large",
+  },
+};
+
+function parseHomeLayoutConfig(value: unknown): HomeLayoutConfig {
+  if (typeof value !== "string" || !value.trim()) {
+    return DEFAULT_HOME_LAYOUT;
+  }
+
+  try {
+    const parsed = JSON.parse(value) as Partial<HomeLayoutConfig>;
+
+    return {
+      hero: {
+        ...DEFAULT_HOME_LAYOUT.hero,
+        ...(parsed.hero ?? {}),
+      },
+      featured: {
+        ...DEFAULT_HOME_LAYOUT.featured,
+        ...(parsed.featured ?? {}),
+      },
+      manifesto: {
+        ...DEFAULT_HOME_LAYOUT.manifesto,
+        ...(parsed.manifesto ?? {}),
+      },
+    };
+  } catch {
+    return DEFAULT_HOME_LAYOUT;
+  }
+}
+
 interface PortfolioContextValue {
   ownerId: number;
+
   settings: {
     portfolioName: string;
     tagline: string;
@@ -21,7 +94,9 @@ interface PortfolioContextValue {
     faviconUrl: string;
     ctaViewProject: string;
     ctaSendMessage: string;
+    homeLayoutConfig: HomeLayoutConfig;
   } | null;
+
   isLoading: boolean;
 }
 
@@ -31,16 +106,22 @@ const PortfolioContext = createContext<PortfolioContextValue>({
   isLoading: true,
 });
 
-export function PortfolioProvider({ children }: { children: React.ReactNode }) {
-  // The public portfolio owner is resolved on the server from OWNER_EMAIL or
-  // the first admin account. No VITE_* owner variable is exposed to the client.
-  const { data, isLoading } = trpc.settings.getPublicPortfolio.useQuery();
+export function PortfolioProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const { data, isLoading } =
+    trpc.settings.getPublicPortfolio.useQuery();
+
   const { theme: activeTheme } = useTheme();
+
   const ownerId = data?.ownerId ?? 0;
   const publicSettings = data?.settings ?? null;
 
   useEffect(() => {
     if (!publicSettings?.themeConfig) return;
+
     const cfg = publicSettings.themeConfig as ThemeConfig;
     const root = document.documentElement;
 
@@ -80,13 +161,30 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
       colorFocus: "#D8B4FE",
     };
 
-    const theme = activeTheme === "dark" ? darkDefaults : lightDefaults;
-    const prefix = activeTheme === "dark" ? "dark" : "light";
+    const theme =
+      activeTheme === "dark" ? darkDefaults : lightDefaults;
+
+    const prefix =
+      activeTheme === "dark" ? "dark" : "light";
+
     const value = (key: keyof typeof theme) => {
       const modeKey = `${prefix}${key[0].toUpperCase()}${key.slice(1)}`;
-      const configured = (cfg as Record<string, unknown>)[modeKey];
-      if (typeof configured === "string" && configured.trim()) return configured;
-      if (activeTheme === "light" && legacy[key]) return legacy[key];
+
+      const configured = (
+        cfg as Record<string, unknown>
+      )[modeKey];
+
+      if (
+        typeof configured === "string" &&
+        configured.trim()
+      ) {
+        return configured;
+      }
+
+      if (activeTheme === "light" && legacy[key]) {
+        return legacy[key];
+      }
+
       return theme[key] as string;
     };
 
@@ -100,19 +198,24 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
       "--color-accent": value("colorAccent"),
       "--color-border": value("colorBorder"),
       "--color-focus": value("colorFocus"),
+
       "--font-size-base": cfg.fontSizeBase,
       "--line-height-base": cfg.lineHeightBase,
       "--letter-spacing-heading": cfg.letterSpacingHeading,
+
       "--radius-none": cfg.radiusNone,
       "--radius-sm": cfg.radiusSm,
       "--radius-md": cfg.radiusMd,
       "--radius-lg": cfg.radiusLg,
       "--radius-full": cfg.radiusFull,
+
       "--shadow-sm": cfg.shadowSm,
       "--shadow-md": cfg.shadowMd,
       "--shadow-lg": cfg.shadowLg,
+
       "--max-width": cfg.maxWidth,
       "--gap-base": cfg.gapBase,
+
       "--motion-fast": cfg.motionFast,
       "--motion-normal": cfg.motionNormal,
       "--motion-slow": cfg.motionSlow,
@@ -120,70 +223,169 @@ export function PortfolioProvider({ children }: { children: React.ReactNode }) {
     };
 
     for (const [prop, val] of Object.entries(map)) {
-      if (val) root.style.setProperty(prop, val);
+      if (val) {
+        root.style.setProperty(prop, val);
+      }
     }
 
-    if (cfg.fontBody) document.body.style.fontFamily = `${cfg.fontBody}, var(--font-sans)`;
+    if (cfg.fontBody) {
+      document.body.style.fontFamily =
+        `${cfg.fontBody}, var(--font-sans)`;
+    }
 
     if (publicSettings.faviconUrl) {
-      const link = document.getElementById("dynamic-favicon") as HTMLLinkElement | null;
-      if (link) link.href = publicSettings.faviconUrl;
+      const link = document.getElementById(
+        "dynamic-favicon",
+      ) as HTMLLinkElement | null;
+
+      if (link) {
+        link.href = publicSettings.faviconUrl;
+      }
     }
   }, [publicSettings, activeTheme]);
 
+  const homeLayoutConfig = parseHomeLayoutConfig(
+    (
+      publicSettings?.themeConfig as
+        | (ThemeConfig & { homeLayoutConfig?: string })
+        | undefined
+    )?.homeLayoutConfig,
+  );
+
   const settings = publicSettings
     ? {
-        portfolioName: publicSettings.portfolioName ?? "Portfólio",
-        tagline: publicSettings.tagline ?? "",
-        aboutTitle: publicSettings.aboutTitle ?? "Sobre",
-        aboutText: publicSettings.aboutText ?? "",
-        shortBio: publicSettings.shortBio ?? "",
-        profileImageUrl: publicSettings.profileImageUrl ?? "",
-        whatsapp: publicSettings.whatsapp ?? "",
-        emailPublic: publicSettings.emailPublic ?? "",
-        location: publicSettings.location ?? "",
+        portfolioName:
+          publicSettings.portfolioName ?? "Portfólio",
+
+        tagline:
+          publicSettings.tagline ?? "",
+
+        aboutTitle:
+          publicSettings.aboutTitle ?? "Sobre",
+
+        aboutText:
+          publicSettings.aboutText ?? "",
+
+        shortBio:
+          publicSettings.shortBio ?? "",
+
+        profileImageUrl:
+          publicSettings.profileImageUrl ?? "",
+
+        whatsapp:
+          publicSettings.whatsapp ?? "",
+
+        emailPublic:
+          publicSettings.emailPublic ?? "",
+
+        location:
+          publicSettings.location ?? "",
+
         socialLinks:
-          (publicSettings.socialLinks as Array<{ label: string; url: string }>) ?? [],
-        contactIntro: publicSettings.contactIntro ?? "",
-        themeConfig: (publicSettings.themeConfig as ThemeConfig) ?? {},
-        faviconUrl: publicSettings.faviconUrl ?? "",
+          (publicSettings.socialLinks as Array<{
+            label: string;
+            url: string;
+          }>) ?? [],
+
+        contactIntro:
+          publicSettings.contactIntro ?? "",
+
+        themeConfig:
+          (publicSettings.themeConfig as ThemeConfig) ?? {},
+
+        faviconUrl:
+          publicSettings.faviconUrl ?? "",
+
         ctaViewProject:
-          (publicSettings.themeConfig as ThemeConfig)?.ctaViewProject ?? "Ver projeto",
+          (publicSettings.themeConfig as ThemeConfig)
+            ?.ctaViewProject ?? "Ver projeto",
+
         ctaSendMessage:
-          (publicSettings.themeConfig as ThemeConfig)?.ctaSendMessage ?? "Enviar pelo WhatsApp",
+          (publicSettings.themeConfig as ThemeConfig)
+            ?.ctaSendMessage ?? "Enviar pelo WhatsApp",
+
+        homeLayoutConfig,
+
         ribbonText:
-          (publicSettings.themeConfig as ThemeConfig)?.ribbonText ?? "Portfólio autoral · ideias, imagens e histórias",
+          (publicSettings.themeConfig as ThemeConfig)
+            ?.ribbonText ??
+          "Portfólio autoral · ideias, imagens e histórias",
+
         homeHeroEyebrow:
-          (publicSettings.themeConfig as ThemeConfig)?.homeHeroEyebrow ?? "Portfólio criativo",
+          (publicSettings.themeConfig as ThemeConfig)
+            ?.homeHeroEyebrow ??
+          "Portfólio criativo",
+
         homeHeroTitle:
-          (publicSettings.themeConfig as ThemeConfig)?.homeHeroTitle ?? "Ideias para ver, sentir e guardar.",
+          (publicSettings.themeConfig as ThemeConfig)
+            ?.homeHeroTitle ??
+          "Ideias para ver, sentir e guardar.",
+
         homeHeroLead:
-          (publicSettings.themeConfig as ThemeConfig)?.homeHeroLead ?? "Um espaço autoral para reunir projetos, processos e histórias em movimento.",
+          (publicSettings.themeConfig as ThemeConfig)
+            ?.homeHeroLead ??
+          "Um espaço autoral para reunir projetos, processos e histórias em movimento.",
+
         homeHeroPrimaryCta:
-          (publicSettings.themeConfig as ThemeConfig)?.homeHeroPrimaryCta ?? "Conheça os projetos",
+          (publicSettings.themeConfig as ThemeConfig)
+            ?.homeHeroPrimaryCta ??
+          "Conheça os projetos",
+
         homeHeroSecondaryCta:
-          (publicSettings.themeConfig as ThemeConfig)?.homeHeroSecondaryCta ?? "Vamos conversar",
+          (publicSettings.themeConfig as ThemeConfig)
+            ?.homeHeroSecondaryCta ??
+          "Vamos conversar",
+
         homeFeaturedEyebrow:
-          (publicSettings.themeConfig as ThemeConfig)?.homeFeaturedEyebrow ?? "Seleção autoral",
+          (publicSettings.themeConfig as ThemeConfig)
+            ?.homeFeaturedEyebrow ??
+          "Seleção autoral",
+
         homeFeaturedTitle:
-          (publicSettings.themeConfig as ThemeConfig)?.homeFeaturedTitle ?? "Projetos em destaque",
+          (publicSettings.themeConfig as ThemeConfig)
+            ?.homeFeaturedTitle ??
+          "Projetos em destaque",
+
         homeFeaturedDescription:
-          (publicSettings.themeConfig as ThemeConfig)?.homeFeaturedDescription ?? "Uma vitrine de processos, imagens e narrativas criadas com intenção.",
+          (publicSettings.themeConfig as ThemeConfig)
+            ?.homeFeaturedDescription ??
+          "Uma vitrine de processos, imagens e narrativas criadas com intenção.",
+
         homeManifestoTileText:
-          (publicSettings.themeConfig as ThemeConfig)?.homeManifestoTileText ?? "criar\né cultivar",
+          (publicSettings.themeConfig as ThemeConfig)
+            ?.homeManifestoTileText ??
+          "criar\né cultivar",
+
         homeManifestoEyebrow:
-          (publicSettings.themeConfig as ThemeConfig)?.homeManifestoEyebrow ?? "Sobre o processo",
+          (publicSettings.themeConfig as ThemeConfig)
+            ?.homeManifestoEyebrow ??
+          "Sobre o processo",
+
         homeManifestoTitle:
-          (publicSettings.themeConfig as ThemeConfig)?.homeManifestoTitle ?? "Toda boa ideia merece ganhar forma.",
+          (publicSettings.themeConfig as ThemeConfig)
+            ?.homeManifestoTitle ??
+          "Toda boa ideia merece ganhar forma.",
+
         homeManifestoText:
-          (publicSettings.themeConfig as ThemeConfig)?.homeManifestoText ?? "Este portfólio reúne trabalhos e pequenos rastros do que acontece antes, durante e depois de uma ideia ganhar o mundo.",
+          (publicSettings.themeConfig as ThemeConfig)
+            ?.homeManifestoText ??
+          "Este portfólio reúne trabalhos e pequenos rastros do que acontece antes, durante e depois de uma ideia ganhar o mundo.",
+
         homeManifestoCta:
-          (publicSettings.themeConfig as ThemeConfig)?.homeManifestoCta ?? "Conheça a história",
+          (publicSettings.themeConfig as ThemeConfig)
+            ?.homeManifestoCta ??
+          "Conheça a história",
       }
     : null;
 
   return (
-    <PortfolioContext.Provider value={{ ownerId, settings, isLoading }}>
+    <PortfolioContext.Provider
+      value={{
+        ownerId,
+        settings,
+        isLoading,
+      }}
+    >
       {children}
     </PortfolioContext.Provider>
   );
