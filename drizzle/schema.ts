@@ -43,6 +43,8 @@ export interface ThemeConfig {
   motionEasing?: string;
   ctaViewProject?: string;
   ctaSendMessage?: string;
+  /** Texto exibido na faixa superior do cabeçalho público. */
+  ribbonText?: string;
 }
 
 export interface User {
