@@ -43,8 +43,20 @@ export interface ThemeConfig {
   motionEasing?: string;
   ctaViewProject?: string;
   ctaSendMessage?: string;
-  /** Texto exibido na faixa superior do cabeçalho público. */
   ribbonText?: string;
+  homeHeroEyebrow?: string;
+  homeHeroTitle?: string;
+  homeHeroLead?: string;
+  homeHeroPrimaryCta?: string;
+  homeHeroSecondaryCta?: string;
+  homeFeaturedEyebrow?: string;
+  homeFeaturedTitle?: string;
+  homeFeaturedDescription?: string;
+  homeManifestoTileText?: string;
+  homeManifestoEyebrow?: string;
+  homeManifestoTitle?: string;
+  homeManifestoText?: string;
+  homeManifestoCta?: string;
 }
 
 export interface User {
